@@ -30,7 +30,6 @@
           <button id="btn-paste" class="icon-btn" title="HTMLを貼り付けてインポート"><i class="fa-solid fa-clipboard"></i></button>
           <button id="btn-import" class="icon-btn" title="HTMLファイルをインポート"><i
               class="fa-solid fa-file-import"></i></button>
-          <button id="btn-add-slide" class="icon-btn" title="スライドを追加"><i class="fa-solid fa-plus"></i></button>
         </div>
       </div>
 
@@ -63,6 +62,57 @@
           <!-- 現在のスライドのシャドウホスト -->
           <div id="current-slide-host"></div>
         </div>
+
+        <!-- 画像編集用パネル（フローティング） -->
+        <div id="image-editor-panel" class="editor-panel hidden">
+          <div class="panel-header">
+            <span><i class="fa-solid fa-crop-simple"></i> 画像の調整</span>
+            <button id="btn-close-image-panel" class="icon-btn" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <div class="panel-body">
+            <div class="control-group">
+              <label>ズーム</label>
+              <input type="range" id="input-crop-zoom" min="100" max="300" value="100">
+            </div>
+            <div class="control-row">
+              <div class="control-group">
+                <label>左右位置</label>
+                <input type="range" id="input-crop-x" min="-100" max="100" value="0">
+              </div>
+              <div class="control-group">
+                <label>上下位置</label>
+                <input type="range" id="input-crop-y" min="-100" max="100" value="0">
+              </div>
+            </div>
+            <button id="btn-change-image-alt" class="btn btn-secondary full-width">
+              <i class="fa-solid fa-image"></i> 画像を差し替える
+            </button>
+          </div>
+        </div>
+
+        <!-- テキスト編集用パネル（フローティング） -->
+        <div id="text-editor-panel" class="editor-panel hidden">
+          <div class="panel-header">
+            <span><i class="fa-solid fa-font"></i> テキストの装飾</span>
+            <button id="btn-close-text-panel" class="icon-btn" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <div class="panel-body">
+            <div class="control-row" style="margin-bottom: 0.5rem;">
+              <button id="btn-text-bold" class="btn btn-secondary" style="width: 100%;" title="太字">
+                <i class="fa-solid fa-bold"></i>
+              </button>
+              <div class="control-group" style="flex-direction: row; align-items: center; gap: 0.5rem;">
+                <label style="margin: 0;">色</label>
+                <input type="color" id="input-text-color" value="#333333"
+                  style="width: 100%; height: 36px; border: none; padding: 0; background: none; cursor: pointer;">
+              </div>
+            </div>
+            <div class="control-group">
+              <label>行間 (Line Height)</label>
+              <input type="range" id="input-text-lineheight" min="0.8" max="2.5" step="0.1" value="1.5">
+            </div>
+          </div>
+        </div>
       </div>
     </main>
 
@@ -83,6 +133,32 @@
         <div class="modal-footer">
           <button id="btn-paste-cancel" class="btn btn-ghost">キャンセル</button>
           <button id="btn-paste-confirm" class="btn btn-primary">作成する</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- HTML Export Modal -->
+    <div id="export-modal" class="modal-overlay hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>HTML書き出し設定</h2>
+          <button id="btn-close-export-modal" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+          <p style="margin-bottom: 1.5rem; color: #ccc;">書き出しオプションを選択してください。</p>
+
+          <label class="checkbox-container">
+            <input type="checkbox" id="check-presentation-mode" checked>
+            <span class="checkmark"></span>
+            プレゼンテーションモードを有効にする
+            <p style="font-size: 0.8rem; color: #888; margin-left: 30px; margin-top: 5px;">
+              閲覧時に「プレゼンテーション開始」ボタンが表示され、全画面表示やキーボード操作が可能になります。
+            </p>
+          </label>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-export-cancel" class="btn btn-ghost">キャンセル</button>
+          <button id="btn-export-confirm" class="btn btn-primary">書き出す</button>
         </div>
       </div>
     </div>
