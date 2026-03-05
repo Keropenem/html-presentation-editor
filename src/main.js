@@ -108,12 +108,47 @@ let activeImage = null; // 現在編集中の画像要素（Shadow DOM内）
 let activeTextElement = null; // 現在編集中のテキスト要素
 let dragSourceIndex = null; // ドラッグ中のサムネイルのインデックス
 let dropTargetIndex = null; // ドロップ先のギャップインデックス
+let dragScrollRAF = null;   // ドラッグ中オートスクロール用
 
 function clearDragIndicators() {
   document.querySelectorAll('.drop-zone').forEach(el => {
     el.classList.remove('active');
   });
   dropTargetIndex = null;
+}
+
+// ドラッグ中の自動スクロール
+const SCROLL_EDGE_PX = 50;   // 端からこのpx以内でスクロール開始
+const SCROLL_MAX_SPEED = 5;  // 最大スクロール速度 (px/frame)
+
+function startDragAutoScroll(clientY) {
+  cancelDragAutoScroll();
+  const rect = els.slideList.getBoundingClientRect();
+  const topDist = clientY - rect.top;
+  const bottomDist = rect.bottom - clientY;
+
+  let speed = 0;
+  if (topDist < SCROLL_EDGE_PX && topDist >= 0) {
+    // 端に近いほど速く（線形補間）
+    speed = -SCROLL_MAX_SPEED * (1 - topDist / SCROLL_EDGE_PX);
+  } else if (bottomDist < SCROLL_EDGE_PX && bottomDist >= 0) {
+    speed = SCROLL_MAX_SPEED * (1 - bottomDist / SCROLL_EDGE_PX);
+  }
+
+  if (speed === 0) return;
+
+  function scrollStep() {
+    els.slideList.scrollTop += speed;
+    dragScrollRAF = requestAnimationFrame(scrollStep);
+  }
+  dragScrollRAF = requestAnimationFrame(scrollStep);
+}
+
+function cancelDragAutoScroll() {
+  if (dragScrollRAF !== null) {
+    cancelAnimationFrame(dragScrollRAF);
+    dragScrollRAF = null;
+  }
 }
 
 // 指定ギャップのドロップゾーンをアクティブ化
@@ -147,6 +182,7 @@ function executeDropAtGap(gapIndex) {
   state.currentIndex = newIndex >= 0 ? newIndex : 0;
 
   clearDragIndicators();
+  cancelDragAutoScroll();
   dragSourceIndex = null;
   renderSidebar();
   loadSlide(state.currentIndex);
@@ -482,6 +518,7 @@ function renderSidebar() {
     thumbContainer.addEventListener('dragend', () => {
       thumbContainer.classList.remove('dragging');
       clearDragIndicators();
+      cancelDragAutoScroll();
       dragSourceIndex = null;
     });
 
@@ -545,6 +582,13 @@ function updateThumbnail(index) {
 }
 
 function setupEventListeners() {
+  // ドラッグ中の自動スクロール（スライドリスト上端・下端付近）
+  els.slideList.addEventListener('dragover', (e) => {
+    if (dragSourceIndex !== null) startDragAutoScroll(e.clientY);
+  });
+  els.slideList.addEventListener('dragleave', () => cancelDragAutoScroll());
+  els.slideList.addEventListener('drop', () => cancelDragAutoScroll());
+
   // インポート
   els.btnPaste.addEventListener('click', () => {
     els.pasteInput.value = '';
