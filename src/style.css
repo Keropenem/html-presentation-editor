@@ -80,7 +80,8 @@ body {
 
 .thumb-item {
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 297 / 210;
+  flex-shrink: 0;
   background: #1e293b;
   border: 2px solid transparent;
   border-radius: 6px;
