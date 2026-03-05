@@ -99,9 +99,30 @@ body {
   opacity: 0.3;
 }
 
-.thumb-item.drag-over {
-  border-color: var(--sec-color);
-  box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.4);
+.thumb-item.drag-over-top,
+.thumb-item.drag-over-bottom {
+  position: relative;
+}
+
+.thumb-item.drag-over-top::before,
+.thumb-item.drag-over-bottom::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--pri-color);
+  border-radius: 2px;
+  z-index: 10;
+  box-shadow: 0 0 6px rgba(99, 102, 241, 0.6);
+}
+
+.thumb-item.drag-over-top::before {
+  top: -2px;
+}
+
+.thumb-item.drag-over-bottom::after {
+  bottom: -2px;
 }
 
 .thumb-preview {
