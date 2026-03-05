@@ -90,26 +90,59 @@
           </div>
         </div>
 
-        <!-- テキスト編集用パネル（フローティング） -->
-        <div id="text-editor-panel" class="editor-panel hidden">
-          <div class="panel-header">
-            <span><i class="fa-solid fa-font"></i> テキストの装飾</span>
-            <button id="btn-close-text-panel" class="icon-btn" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
-          </div>
-          <div class="panel-body">
-            <div class="control-row" style="margin-bottom: 0.5rem;">
-              <button id="btn-text-bold" class="btn btn-secondary" style="width: 100%;" title="太字">
-                <i class="fa-solid fa-bold"></i>
-              </button>
-              <div class="control-group" style="flex-direction: row; align-items: center; gap: 0.5rem;">
-                <label style="margin: 0;">色</label>
-                <input type="color" id="input-text-color" value="#333333"
-                  style="width: 100%; height: 36px; border: none; padding: 0; background: none; cursor: pointer;">
+        <!-- テキスト編集パネル群 -->
+        <div class="text-panels-container">
+          <!-- インライン書式パネル（テキスト選択時のみ表示） -->
+          <div id="text-format-panel" class="editor-panel hidden">
+            <div class="panel-header">
+              <span><i class="fa-solid fa-highlighter"></i> 書式</span>
+            </div>
+            <div class="panel-body">
+              <div class="format-toolbar">
+                <button id="btn-text-bold" class="fmt-btn" title="太字"><b>B</b></button>
+                <button id="btn-text-italic" class="fmt-btn" title="斜体"><i>I</i></button>
+                <button id="btn-text-underline" class="fmt-btn" title="下線"><u>U</u></button>
+              </div>
+              <div class="control-group">
+                <label>文字色</label>
+                <div class="color-palette">
+                  <button class="color-swatch" data-color="#333333" title="ダークグレー" style="background:#333333;"></button>
+                  <button class="color-swatch" data-color="#FFFFFF" title="ホワイト" style="background:#FFFFFF;"></button>
+                  <button class="color-swatch" data-color="#EF4444" title="レッド" style="background:#EF4444;"></button>
+                  <button class="color-swatch" data-color="#6366F1" title="インディゴ" style="background:#6366F1;"></button>
+                  <button class="color-swatch" data-color="#F59E0B" title="アンバー" style="background:#F59E0B;"></button>
+                </div>
+              </div>
+              <div class="control-group">
+                <label>文字サイズ <input type="number" id="val-sel-fontsize" class="slider-val-input" value="16" min="8" max="128"><span class="slider-unit">px</span></label>
+                <input type="range" id="input-sel-fontsize" min="8" max="128" step="1" value="16">
               </div>
             </div>
-            <div class="control-group">
-              <label>行間 (Line Height)</label>
-              <input type="range" id="input-text-lineheight" min="0.8" max="2.5" step="0.1" value="1.5">
+          </div>
+
+          <!-- ブロック編集パネル（テキストボックス選択時） -->
+          <div id="text-editor-panel" class="editor-panel hidden">
+            <div class="panel-header">
+              <span><i class="fa-solid fa-text-height"></i> テキストボックス</span>
+              <button id="btn-close-text-panel" class="icon-btn" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="panel-body">
+              <div class="control-group">
+                <label>文字サイズ <input type="number" id="val-fontsize" class="slider-val-input" value="16" min="8" max="128"><span class="slider-unit">px</span></label>
+                <input type="range" id="input-text-fontsize" min="8" max="128" step="1" value="16">
+              </div>
+              <div class="control-group">
+                <label>行間 <input type="number" id="val-lineheight" class="slider-val-input" value="1.5" min="0.8" max="3.0" step="0.1"></label>
+                <input type="range" id="input-text-lineheight" min="0.8" max="3.0" step="0.1" value="1.5">
+              </div>
+              <div class="control-group">
+                <label>上余白 <input type="number" id="val-margin-top" class="slider-val-input" value="0" min="-50" max="200"><span class="slider-unit">px</span></label>
+                <input type="range" id="input-text-margin-top" min="-50" max="200" step="1" value="0">
+              </div>
+              <div class="control-group">
+                <label>下余白 <input type="number" id="val-margin-bottom" class="slider-val-input" value="0" min="-50" max="200"><span class="slider-unit">px</span></label>
+                <input type="range" id="input-text-margin-bottom" min="-50" max="200" step="1" value="0">
+              </div>
             </div>
           </div>
         </div>

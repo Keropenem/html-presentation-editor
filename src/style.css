@@ -368,3 +368,104 @@ body {
   width: 100%;
   justify-content: center;
 }
+
+/* --- Format Toolbar (Text Panel) --- */
+.format-toolbar {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.fmt-btn {
+  flex: 1;
+  height: 36px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fmt-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.fmt-btn:active {
+  background: var(--pri-color);
+}
+
+/* --- Color Palette --- */
+.color-palette {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.color-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
+  padding: 0;
+}
+
+.color-swatch:hover {
+  transform: scale(1.2);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+/* --- Text Panels Container --- */
+.text-panels-container {
+  position: absolute;
+  bottom: 2rem;
+  right: 2rem;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.text-panels-container .editor-panel {
+  position: static;
+  width: 100%;
+  pointer-events: auto;
+}
+
+/* --- Slider Value Input --- */
+.slider-val-input {
+  width: 3.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15rem 0.3rem;
+  border-radius: 4px;
+  text-align: right;
+  margin-left: 0.25rem;
+  -moz-appearance: textfield;
+}
+
+.slider-val-input::-webkit-inner-spin-button,
+.slider-val-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.slider-val-input:focus {
+  outline: 1px solid var(--pri-color);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.slider-unit {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  margin-left: 0.1rem;
+}

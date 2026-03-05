@@ -68,11 +68,25 @@ const els = {
   btnCloseImagePanel: document.getElementById('btn-close-image-panel'),
   btnChangeImageAlt: document.getElementById('btn-change-image-alt'),
 
-  // テキスト編集パネル
-  textPanel: document.getElementById('text-editor-panel'),
+  // テキスト書式パネル（選択テキスト用）
+  textFormatPanel: document.getElementById('text-format-panel'),
   btnTextBold: document.getElementById('btn-text-bold'),
-  inputTextColor: document.getElementById('input-text-color'),
+  btnTextItalic: document.getElementById('btn-text-italic'),
+  btnTextUnderline: document.getElementById('btn-text-underline'),
+  colorSwatches: document.querySelectorAll('.color-swatch'),
+  inputSelFontSize: document.getElementById('input-sel-fontsize'),
+  valSelFontSize: document.getElementById('val-sel-fontsize'),
+
+  // テキストボックスパネル（ブロック要素用）
+  textPanel: document.getElementById('text-editor-panel'),
+  inputTextFontSize: document.getElementById('input-text-fontsize'),
+  valFontSize: document.getElementById('val-fontsize'),
   inputTextLineHeight: document.getElementById('input-text-lineheight'),
+  valLineHeight: document.getElementById('val-lineheight'),
+  inputTextMarginTop: document.getElementById('input-text-margin-top'),
+  valMarginTop: document.getElementById('val-margin-top'),
+  inputTextMarginBottom: document.getElementById('input-text-margin-bottom'),
+  valMarginBottom: document.getElementById('val-margin-bottom'),
   btnCloseTextPanel: document.getElementById('btn-close-text-panel'),
 
   // エクスポートモーダル
@@ -180,6 +194,21 @@ class SlideRenderer {
         closeTextPanelFunc();
       }
     });
+
+    // テキスト選択の検知 → インライン書式パネルの表示/非表示
+    const shadowRef = this.shadow;
+    wrapper.addEventListener('mouseup', () => {
+      setTimeout(() => {
+        const sel = typeof shadowRef.getSelection === 'function'
+          ? shadowRef.getSelection()
+          : document.getSelection();
+        if (sel && !sel.isCollapsed && sel.toString().trim()) {
+          els.textFormatPanel.classList.remove('hidden');
+        } else {
+          els.textFormatPanel.classList.add('hidden');
+        }
+      }, 10);
+    });
   }
 }
 
@@ -235,19 +264,25 @@ function selectTextForEdit(el) {
   activeTextElement = el;
   activeTextElement.classList.add('active-text-editing');
 
-  // 現在のスタイルをUIに反映
   const style = window.getComputedStyle(el);
 
-  // 文字色 (rgb -> hex 変換)
-  const rgb = style.color.match(/\d+/g);
-  if (rgb && rgb.length >= 3) {
-    const hex = "#" + rgb.slice(0, 3).map(x => parseInt(x).toString(16).padStart(2, '0')).join('');
-    els.inputTextColor.value = hex;
-  }
+  // 文字サイズ
+  const fs = Math.round(parseFloat(style.fontSize));
+  els.inputTextFontSize.value = fs;
+  els.valFontSize.value = fs;
 
   // 行間
   const lh = parseFloat(style.lineHeight) / parseFloat(style.fontSize) || 1.5;
   els.inputTextLineHeight.value = lh.toFixed(1);
+  els.valLineHeight.value = lh.toFixed(1);
+
+  // 上下余白
+  const mt = Math.round(parseFloat(style.marginTop)) || 0;
+  const mb = Math.round(parseFloat(style.marginBottom)) || 0;
+  els.inputTextMarginTop.value = mt;
+  els.valMarginTop.value = mt;
+  els.inputTextMarginBottom.value = mb;
+  els.valMarginBottom.value = mb;
 
   els.textPanel.classList.remove('hidden');
 }
@@ -256,6 +291,7 @@ function closeTextPanelFunc() {
   if (activeTextElement) activeTextElement.classList.remove('active-text-editing');
   activeTextElement = null;
   els.textPanel.classList.add('hidden');
+  els.textFormatPanel.classList.add('hidden');
 }
 
 function updateActiveImageCrop() {
@@ -435,23 +471,126 @@ function setupEventListeners() {
     }
   });
 
-  // テキスト編集
-  els.btnTextBold.addEventListener('click', () => {
-    if (!activeTextElement) return;
-    const current = activeTextElement.style.fontWeight;
-    activeTextElement.style.fontWeight = (current === 'bold' || current === '700') ? 'normal' : 'bold';
+  // === インライン書式パネル（選択テキスト用） ===
+  // mousedown + preventDefault でフォーカスを奪わず選択範囲を保持
+  els.btnTextBold.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    document.execCommand('bold');
     saveCurrentSlideState();
   });
 
-  els.inputTextColor.addEventListener('input', (e) => {
-    if (!activeTextElement) return;
-    activeTextElement.style.color = e.target.value;
+  els.btnTextItalic.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    document.execCommand('italic');
     saveCurrentSlideState();
   });
 
-  els.inputTextLineHeight.addEventListener('input', (e) => {
+  els.btnTextUnderline.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    document.execCommand('underline');
+    saveCurrentSlideState();
+  });
+
+  els.colorSwatches.forEach(swatch => {
+    swatch.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const color = swatch.dataset.color;
+      document.execCommand('styleWithCSS', false, true);
+      document.execCommand('foreColor', false, color);
+      saveCurrentSlideState();
+    });
+  });
+
+  // 選択テキストの文字サイズ変更（execCommand fontSize + 後処理）
+  function applySelFontSize(sizePx) {
+    document.execCommand('styleWithCSS', false, true);
+    document.execCommand('fontSize', false, '7');
+    const frame = mainRenderer.shadow.querySelector('.slide-frame');
+    if (frame) {
+      frame.querySelectorAll('span').forEach(span => {
+        const fs = span.style.fontSize;
+        if (fs && (fs.includes('xxx-large') || fs === '-webkit-xxx-large')) {
+          span.style.fontSize = sizePx + 'px';
+        }
+      });
+      frame.querySelectorAll('font[size="7"]').forEach(font => {
+        const span = document.createElement('span');
+        span.style.fontSize = sizePx + 'px';
+        span.innerHTML = font.innerHTML;
+        font.replaceWith(span);
+      });
+    }
+    saveCurrentSlideState();
+  }
+
+  // スライダー → 数値入力同期 + 適用
+  els.inputSelFontSize.addEventListener('mousedown', (e) => e.preventDefault());
+  els.inputSelFontSize.addEventListener('input', (e) => {
+    els.valSelFontSize.value = e.target.value;
+    applySelFontSize(e.target.value);
+  });
+
+  // 数値入力 → スライダー同期 + 適用（選択を保存/復元）
+  let savedSelRange = null;
+  els.valSelFontSize.addEventListener('focus', () => {
+    const sel = typeof mainRenderer.shadow.getSelection === 'function'
+      ? mainRenderer.shadow.getSelection()
+      : document.getSelection();
+    if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+      savedSelRange = sel.getRangeAt(0).cloneRange();
+    }
+  });
+  els.valSelFontSize.addEventListener('change', (e) => {
+    const sizePx = parseInt(e.target.value) || 16;
+    e.target.value = sizePx;
+    els.inputSelFontSize.value = sizePx;
+    if (savedSelRange) {
+      const frame = mainRenderer.shadow.querySelector('.slide-frame');
+      if (frame) frame.focus();
+      const sel = typeof mainRenderer.shadow.getSelection === 'function'
+        ? mainRenderer.shadow.getSelection()
+        : document.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(savedSelRange);
+      savedSelRange = null;
+      applySelFontSize(sizePx);
+    }
+  });
+
+  // === ブロック編集パネル（テキストボックス用） ===
+  // ヘルパー: スライダーと数値入力の双方向バインド
+  function bindSliderAndInput(slider, numInput, applyFn) {
+    slider.addEventListener('input', (e) => {
+      numInput.value = e.target.value;
+      applyFn(e.target.value);
+    });
+    numInput.addEventListener('input', (e) => {
+      slider.value = e.target.value;
+      applyFn(e.target.value);
+    });
+  }
+
+  bindSliderAndInput(els.inputTextFontSize, els.valFontSize, (v) => {
     if (!activeTextElement) return;
-    activeTextElement.style.lineHeight = e.target.value;
+    activeTextElement.style.fontSize = v + 'px';
+    saveCurrentSlideState();
+  });
+
+  bindSliderAndInput(els.inputTextLineHeight, els.valLineHeight, (v) => {
+    if (!activeTextElement) return;
+    activeTextElement.style.lineHeight = v;
+    saveCurrentSlideState();
+  });
+
+  bindSliderAndInput(els.inputTextMarginTop, els.valMarginTop, (v) => {
+    if (!activeTextElement) return;
+    activeTextElement.style.marginTop = v + 'px';
+    saveCurrentSlideState();
+  });
+
+  bindSliderAndInput(els.inputTextMarginBottom, els.valMarginBottom, (v) => {
+    if (!activeTextElement) return;
+    activeTextElement.style.marginBottom = v + 'px';
     saveCurrentSlideState();
   });
 
