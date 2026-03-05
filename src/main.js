@@ -106,6 +106,7 @@ const els = {
 
 let activeImage = null; // 現在編集中の画像要素（Shadow DOM内）
 let activeTextElement = null; // 現在編集中のテキスト要素
+let dragSourceIndex = null; // ドラッグ中のサムネイルのインデックス
 
 /* --- スライダレンダラー (Shadow DOM) --- */
 class SlideRenderer {
@@ -369,7 +370,53 @@ function renderSidebar() {
   state.slides.forEach((slide, index) => {
     const thumbContainer = document.createElement('div');
     thumbContainer.className = 'thumb-item';
+    thumbContainer.draggable = true;
     thumbContainer.onclick = () => loadSlide(index);
+
+    // ドラッグ&ドロップによる並べ替え
+    thumbContainer.addEventListener('dragstart', (e) => {
+      dragSourceIndex = index;
+      thumbContainer.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    thumbContainer.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      // ドロップ先のハイライト
+      document.querySelectorAll('.thumb-item').forEach(el => el.classList.remove('drag-over'));
+      if (dragSourceIndex !== index) thumbContainer.classList.add('drag-over');
+    });
+
+    thumbContainer.addEventListener('dragleave', () => {
+      thumbContainer.classList.remove('drag-over');
+    });
+
+    thumbContainer.addEventListener('drop', (e) => {
+      e.preventDefault();
+      thumbContainer.classList.remove('drag-over');
+      if (dragSourceIndex === null || dragSourceIndex === index) return;
+
+      // 現在表示中のスライドIDを記憶
+      const currentSlideId = state.slides[state.currentIndex].id;
+
+      // 配列を並べ替え
+      const [moved] = state.slides.splice(dragSourceIndex, 1);
+      state.slides.splice(index, 0, moved);
+
+      // 表示中スライドの新しいインデックスを追跡
+      const newIndex = state.slides.findIndex(s => s.id === currentSlideId);
+      state.currentIndex = newIndex >= 0 ? newIndex : 0;
+
+      renderSidebar();
+      loadSlide(state.currentIndex);
+    });
+
+    thumbContainer.addEventListener('dragend', () => {
+      thumbContainer.classList.remove('dragging');
+      document.querySelectorAll('.thumb-item').forEach(el => el.classList.remove('drag-over'));
+      dragSourceIndex = null;
+    });
 
     const previewRoot = document.createElement('div');
     previewRoot.className = 'thumb-preview';
