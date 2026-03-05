@@ -107,11 +107,13 @@ const els = {
 let activeImage = null; // 現在編集中の画像要素（Shadow DOM内）
 let activeTextElement = null; // 現在編集中のテキスト要素
 let dragSourceIndex = null; // ドラッグ中のサムネイルのインデックス
+let dropTargetIndex = null; // ドロップ先のギャップインデックス
 
 function clearDragIndicators() {
-  document.querySelectorAll('.thumb-item').forEach(el => {
-    el.classList.remove('drag-over-top', 'drag-over-bottom');
+  document.querySelectorAll('.drop-zone').forEach(el => {
+    el.classList.remove('active');
   });
+  dropTargetIndex = null;
 }
 
 /* --- スライダレンダラー (Shadow DOM) --- */
@@ -370,10 +372,62 @@ function loadSlide(index) {
   document.getElementById('current-index').textContent = index + 1;
 }
 
+function createDropZone(gapIndex) {
+  const zone = document.createElement('div');
+  zone.className = 'drop-zone';
+  zone.dataset.gapIndex = gapIndex;
+
+  zone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragSourceIndex === null) return;
+    // このギャップがドラッグ元の直前or直後なら無意味なので無視
+    if (gapIndex === dragSourceIndex || gapIndex === dragSourceIndex + 1) return;
+    clearDragIndicators();
+    zone.classList.add('active');
+    dropTargetIndex = gapIndex;
+  });
+
+  zone.addEventListener('dragleave', () => {
+    zone.classList.remove('active');
+  });
+
+  zone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    if (dragSourceIndex === null) { clearDragIndicators(); return; }
+    // 無意味な移動を無視
+    if (gapIndex === dragSourceIndex || gapIndex === dragSourceIndex + 1) {
+      clearDragIndicators();
+      return;
+    }
+
+    let targetIndex = gapIndex;
+    // ドラッグ元がターゲットより前にある場合、削除後にインデックスがずれる補正
+    if (dragSourceIndex < targetIndex) targetIndex--;
+
+    const currentSlideId = state.slides[state.currentIndex].id;
+    const [moved] = state.slides.splice(dragSourceIndex, 1);
+    state.slides.splice(targetIndex, 0, moved);
+
+    const newIndex = state.slides.findIndex(s => s.id === currentSlideId);
+    state.currentIndex = newIndex >= 0 ? newIndex : 0;
+
+    clearDragIndicators();
+    dragSourceIndex = null;
+    renderSidebar();
+    loadSlide(state.currentIndex);
+  });
+
+  return zone;
+}
+
 function renderSidebar() {
   els.slideList.innerHTML = '';
 
   state.slides.forEach((slide, index) => {
+    // スライドの前にドロップゾーンを挿入
+    els.slideList.appendChild(createDropZone(index));
+
     const thumbContainer = document.createElement('div');
     thumbContainer.className = 'thumb-item';
     thumbContainer.draggable = true;
@@ -384,53 +438,6 @@ function renderSidebar() {
       dragSourceIndex = index;
       thumbContainer.classList.add('dragging');
       e.dataTransfer.effectAllowed = 'move';
-    });
-
-    thumbContainer.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      if (dragSourceIndex === index) return;
-      // 全サムネイルのインジケータをクリア
-      clearDragIndicators();
-      // マウス位置がサムネイルの上半分か下半分かで挿入バーの位置を決定
-      const rect = thumbContainer.getBoundingClientRect();
-      const isTop = e.clientY < rect.top + rect.height / 2;
-      thumbContainer.classList.add(isTop ? 'drag-over-top' : 'drag-over-bottom');
-    });
-
-    thumbContainer.addEventListener('dragleave', () => {
-      thumbContainer.classList.remove('drag-over-top', 'drag-over-bottom');
-    });
-
-    thumbContainer.addEventListener('drop', (e) => {
-      e.preventDefault();
-      if (dragSourceIndex === null || dragSourceIndex === index) {
-        clearDragIndicators();
-        return;
-      }
-
-      // 上半分 → その位置の前に挿入、下半分 → その位置の後に挿入
-      const rect = thumbContainer.getBoundingClientRect();
-      const isTop = e.clientY < rect.top + rect.height / 2;
-      let targetIndex = isTop ? index : index + 1;
-
-      // ドラッグ元がターゲットより前にある場合、削除後にインデックスがずれる補正
-      if (dragSourceIndex < targetIndex) targetIndex--;
-      if (dragSourceIndex === targetIndex) {
-        clearDragIndicators();
-        return;
-      }
-
-      const currentSlideId = state.slides[state.currentIndex].id;
-      const [moved] = state.slides.splice(dragSourceIndex, 1);
-      state.slides.splice(targetIndex, 0, moved);
-
-      const newIndex = state.slides.findIndex(s => s.id === currentSlideId);
-      state.currentIndex = newIndex >= 0 ? newIndex : 0;
-
-      clearDragIndicators();
-      renderSidebar();
-      loadSlide(state.currentIndex);
     });
 
     thumbContainer.addEventListener('dragend', () => {
@@ -482,12 +489,15 @@ function renderSidebar() {
     els.slideList.appendChild(thumbContainer);
   });
 
+  // 最後のスライドの後にもドロップゾーンを追加
+  els.slideList.appendChild(createDropZone(state.slides.length));
+
   setTimeout(updateThumbnailsScale, 0);
   document.getElementById('total-slides').textContent = state.slides.length;
 }
 
 function updateThumbnail(index) {
-  const thumbs = els.slideList.querySelectorAll('.thumb-item');
+  const thumbs = Array.from(els.slideList.querySelectorAll('.thumb-item'));
   if (thumbs[index]) {
     const shadow = thumbs[index].querySelector('.thumb-preview').shadowRoot;
     const frame = shadow.querySelector('.slide-frame');
