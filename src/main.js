@@ -116,6 +116,42 @@ function clearDragIndicators() {
   dropTargetIndex = null;
 }
 
+// 指定ギャップのドロップゾーンをアクティブ化
+function activateDropZone(gapIndex) {
+  if (dragSourceIndex === null) return;
+  if (gapIndex === dragSourceIndex || gapIndex === dragSourceIndex + 1) return;
+  clearDragIndicators();
+  const zone = els.slideList.querySelector(`.drop-zone[data-gap-index="${gapIndex}"]`);
+  if (zone) {
+    zone.classList.add('active');
+    dropTargetIndex = gapIndex;
+  }
+}
+
+// 指定ギャップにドロップ実行
+function executeDropAtGap(gapIndex) {
+  if (dragSourceIndex === null) return;
+  if (gapIndex === dragSourceIndex || gapIndex === dragSourceIndex + 1) {
+    clearDragIndicators();
+    return;
+  }
+
+  let targetIndex = gapIndex;
+  if (dragSourceIndex < targetIndex) targetIndex--;
+
+  const currentSlideId = state.slides[state.currentIndex].id;
+  const [moved] = state.slides.splice(dragSourceIndex, 1);
+  state.slides.splice(targetIndex, 0, moved);
+
+  const newIndex = state.slides.findIndex(s => s.id === currentSlideId);
+  state.currentIndex = newIndex >= 0 ? newIndex : 0;
+
+  clearDragIndicators();
+  dragSourceIndex = null;
+  renderSidebar();
+  loadSlide(state.currentIndex);
+}
+
 /* --- スライダレンダラー (Shadow DOM) --- */
 class SlideRenderer {
   constructor(hostElement) {
@@ -380,12 +416,7 @@ function createDropZone(gapIndex) {
   zone.addEventListener('dragover', (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    if (dragSourceIndex === null) return;
-    // このギャップがドラッグ元の直前or直後なら無意味なので無視
-    if (gapIndex === dragSourceIndex || gapIndex === dragSourceIndex + 1) return;
-    clearDragIndicators();
-    zone.classList.add('active');
-    dropTargetIndex = gapIndex;
+    activateDropZone(gapIndex);
   });
 
   zone.addEventListener('dragleave', () => {
@@ -394,28 +425,7 @@ function createDropZone(gapIndex) {
 
   zone.addEventListener('drop', (e) => {
     e.preventDefault();
-    if (dragSourceIndex === null) { clearDragIndicators(); return; }
-    // 無意味な移動を無視
-    if (gapIndex === dragSourceIndex || gapIndex === dragSourceIndex + 1) {
-      clearDragIndicators();
-      return;
-    }
-
-    let targetIndex = gapIndex;
-    // ドラッグ元がターゲットより前にある場合、削除後にインデックスがずれる補正
-    if (dragSourceIndex < targetIndex) targetIndex--;
-
-    const currentSlideId = state.slides[state.currentIndex].id;
-    const [moved] = state.slides.splice(dragSourceIndex, 1);
-    state.slides.splice(targetIndex, 0, moved);
-
-    const newIndex = state.slides.findIndex(s => s.id === currentSlideId);
-    state.currentIndex = newIndex >= 0 ? newIndex : 0;
-
-    clearDragIndicators();
-    dragSourceIndex = null;
-    renderSidebar();
-    loadSlide(state.currentIndex);
+    executeDropAtGap(gapIndex);
   });
 
   return zone;
@@ -438,6 +448,35 @@ function renderSidebar() {
       dragSourceIndex = index;
       thumbContainer.classList.add('dragging');
       e.dataTransfer.effectAllowed = 'move';
+    });
+
+    // サムネイルの上1/4・下1/4もドロップ範囲として扱う
+    thumbContainer.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (dragSourceIndex === null || dragSourceIndex === index) return;
+      const rect = thumbContainer.getBoundingClientRect();
+      const ratio = (e.clientY - rect.top) / rect.height;
+      if (ratio < 0.25) {
+        activateDropZone(index);       // 上1/4 → この位置の前に挿入
+      } else if (ratio > 0.75) {
+        activateDropZone(index + 1);   // 下1/4 → この位置の後に挿入
+      } else {
+        clearDragIndicators();          // 中央部分はドロップ対象外
+      }
+    });
+
+    thumbContainer.addEventListener('dragleave', () => {
+      // dragleaveはdrop-zone側のdragoverで処理されるので何もしない
+    });
+
+    thumbContainer.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (dropTargetIndex !== null) {
+        executeDropAtGap(dropTargetIndex);
+      } else {
+        clearDragIndicators();
+      }
     });
 
     thumbContainer.addEventListener('dragend', () => {
