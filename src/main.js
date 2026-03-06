@@ -245,7 +245,7 @@ class SlideRenderer {
       /* 編集用の画像スタイル */
       img { cursor: pointer; transition: outline 0.2s; }
       img:hover { outline: 2px solid #6366f1; }
-      img.active-editing { outline: 3px solid #6366f1; outline-offset: -3px; }
+      img.active-editing { outline: none; }
 
       /* 編集用のテキストスタイル */
       .slide-frame > *:not(img):hover { outline: 1px dashed rgba(99, 102, 241, 0.5); }
@@ -341,8 +341,13 @@ sidebarObserver.observe(els.slideList);
 
 /* --- 画像編集ロジック --- */
 
+const IMG_EDIT_FILTER = 'drop-shadow(0 0 3px #6366f1) drop-shadow(0 0 1px #6366f1)';
+
 function selectImageForEdit(img) {
-  if (activeImage) activeImage.classList.remove('active-editing');
+  if (activeImage) {
+    activeImage.classList.remove('active-editing');
+    if (activeImage.parentElement) activeImage.parentElement.style.filter = '';
+  }
   activeImage = img;
   activeImage.classList.add('active-editing');
 
@@ -383,13 +388,18 @@ function selectImageForEdit(img) {
 
     // フレーム設定を適用（width/height/clip-path/overflow）
     applyImageFrame();
+    // 編集インジケータ（drop-shadowはclip-path後に適用されるためフレーム形状に追従）
+    parent.style.filter = IMG_EDIT_FILTER;
   }
 
   els.imagePanel.classList.remove('hidden');
 }
 
 function closeImagePanelFunc() {
-  if (activeImage) activeImage.classList.remove('active-editing');
+  if (activeImage) {
+    activeImage.classList.remove('active-editing');
+    if (activeImage.parentElement) activeImage.parentElement.style.filter = '';
+  }
   activeImage = null;
   els.imagePanel.classList.add('hidden');
 }
