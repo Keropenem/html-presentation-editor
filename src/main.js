@@ -357,12 +357,20 @@ function selectImageForEdit(img) {
     els.inputImgHeight.value = h;
     els.valImgHeight.value = h;
 
-    const posY = Math.round(parseFloat(pStyle.marginTop)) || 0;
-    const posX = Math.round(parseFloat(pStyle.marginLeft)) || 0;
-    els.inputImgPosY.value = posY;
-    els.valImgPosY.value = posY;
-    els.inputImgPosX.value = posX;
-    els.valImgPosX.value = posX;
+    let imgPosX = 0, imgPosY = 0;
+    const ptx = pStyle.transform;
+    if (ptx && ptx !== 'none') {
+      const m = ptx.match(/matrix\(([^)]+)\)/);
+      if (m) {
+        const vals = m[1].split(',').map(Number);
+        imgPosX = Math.round(vals[4]) || 0;
+        imgPosY = Math.round(vals[5]) || 0;
+      }
+    }
+    els.inputImgPosY.value = imgPosY;
+    els.valImgPosY.value = imgPosY;
+    els.inputImgPosX.value = imgPosX;
+    els.valImgPosX.value = imgPosX;
   }
 
   els.imagePanel.classList.remove('hidden');
@@ -817,17 +825,16 @@ function setupEventListeners() {
     saveCurrentSlideState();
   });
 
-  bindSliderAndInput(els.inputImgPosY, els.valImgPosY, (v) => {
+  function applyImageBoxPosition() {
     if (!activeImage || !activeImage.parentElement) return;
-    activeImage.parentElement.style.marginTop = v + 'px';
+    const y = els.inputImgPosY.value || 0;
+    const x = els.inputImgPosX.value || 0;
+    activeImage.parentElement.style.transform = `translate(${x}px, ${y}px)`;
     saveCurrentSlideState();
-  });
+  }
 
-  bindSliderAndInput(els.inputImgPosX, els.valImgPosX, (v) => {
-    if (!activeImage || !activeImage.parentElement) return;
-    activeImage.parentElement.style.marginLeft = v + 'px';
-    saveCurrentSlideState();
-  });
+  bindSliderAndInput(els.inputImgPosY, els.valImgPosY, () => applyImageBoxPosition());
+  bindSliderAndInput(els.inputImgPosX, els.valImgPosX, () => applyImageBoxPosition());
 
   // エクスポート
   els.btnExportHtml.addEventListener('click', () => els.exportModal.classList.remove('hidden'));
