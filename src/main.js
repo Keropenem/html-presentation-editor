@@ -393,13 +393,21 @@ function selectTextForEdit(el) {
   els.inputTextLineHeight.value = lh.toFixed(1);
   els.valLineHeight.value = lh.toFixed(1);
 
-  // 上下・左右位置
-  const mt = Math.round(parseFloat(style.marginTop)) || 0;
-  const ml = Math.round(parseFloat(style.marginLeft)) || 0;
-  els.inputTextPosY.value = mt;
-  els.valTextPosY.value = mt;
-  els.inputTextPosX.value = ml;
-  els.valTextPosX.value = ml;
+  // 上下・左右位置 (transformから読み取り)
+  let posX = 0, posY = 0;
+  const tx = style.transform; // matrix(a,b,c,d,e,f) or none
+  if (tx && tx !== 'none') {
+    const m = tx.match(/matrix\(([^)]+)\)/);
+    if (m) {
+      const vals = m[1].split(',').map(Number);
+      posX = Math.round(vals[4]) || 0;
+      posY = Math.round(vals[5]) || 0;
+    }
+  }
+  els.inputTextPosY.value = posY;
+  els.valTextPosY.value = posY;
+  els.inputTextPosX.value = posX;
+  els.valTextPosX.value = posX;
 
   els.textPanel.classList.remove('hidden');
 }
@@ -783,17 +791,16 @@ function setupEventListeners() {
     saveCurrentSlideState();
   });
 
-  bindSliderAndInput(els.inputTextPosY, els.valTextPosY, (v) => {
+  function applyTextPosition() {
     if (!activeTextElement) return;
-    activeTextElement.style.marginTop = v + 'px';
+    const y = els.inputTextPosY.value || 0;
+    const x = els.inputTextPosX.value || 0;
+    activeTextElement.style.transform = `translate(${x}px, ${y}px)`;
     saveCurrentSlideState();
-  });
+  }
 
-  bindSliderAndInput(els.inputTextPosX, els.valTextPosX, (v) => {
-    if (!activeTextElement) return;
-    activeTextElement.style.marginLeft = v + 'px';
-    saveCurrentSlideState();
-  });
+  bindSliderAndInput(els.inputTextPosY, els.valTextPosY, () => applyTextPosition());
+  bindSliderAndInput(els.inputTextPosX, els.valTextPosX, () => applyTextPosition());
 
   els.btnCloseTextPanel.addEventListener('click', closeTextPanelFunc);
 
