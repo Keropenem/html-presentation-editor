@@ -380,7 +380,9 @@ body {
   font-size: 0.75rem;
   color: var(--text-secondary);
   font-weight: 500;
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
 }
 
 .control-group input[type="range"] {
@@ -465,6 +467,8 @@ body {
 /* --- Slider Value Input --- */
 .slider-val-input {
   width: 2.8rem;
+  min-width: 2rem;
+  flex-shrink: 1;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
@@ -473,7 +477,6 @@ body {
   padding: 0.15rem 0.3rem;
   border-radius: 4px;
   text-align: right;
-  margin-left: 0.25rem;
   -moz-appearance: textfield;
 }
 
