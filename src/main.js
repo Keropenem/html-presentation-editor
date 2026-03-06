@@ -118,29 +118,22 @@ function clearDragIndicators() {
 }
 
 // ドラッグ中の自動スクロール
-const SCROLL_EDGE_PX = 50;   // 端からこのpx以内でスクロール開始
-const SCROLL_MAX_SPEED = 5;  // 最大スクロール速度 (px/frame)
+const SCROLL_MAX_SPEED = 5;    // 最大スクロール速度 (px/frame)
+const SCROLL_ZONE_RATIO = 0.3; // サイドバー上下30%がスクロール域
 
-function startDragAutoScroll(clientY) {
+function startDragAutoScroll(clientY, sidebarEl) {
   cancelDragAutoScroll();
-  const rect = els.slideList.getBoundingClientRect();
+  const rect = sidebarEl.getBoundingClientRect();
+  const edgeZone = rect.height * SCROLL_ZONE_RATIO;
+
+  const topDist = clientY - rect.top;
+  const bottomDist = rect.bottom - clientY;
 
   let speed = 0;
-  if (clientY < rect.top) {
-    // リストより上（ヘッダー等）→ 最大速度で上スクロール
-    speed = -SCROLL_MAX_SPEED;
-  } else if (clientY > rect.bottom) {
-    // リストより下（フッター等）→ 最大速度で下スクロール
-    speed = SCROLL_MAX_SPEED;
-  } else {
-    // リスト内の端付近 → 距離に応じた速度
-    const topDist = clientY - rect.top;
-    const bottomDist = rect.bottom - clientY;
-    if (topDist < SCROLL_EDGE_PX) {
-      speed = -SCROLL_MAX_SPEED * (1 - topDist / SCROLL_EDGE_PX);
-    } else if (bottomDist < SCROLL_EDGE_PX) {
-      speed = SCROLL_MAX_SPEED * (1 - bottomDist / SCROLL_EDGE_PX);
-    }
+  if (topDist < edgeZone) {
+    speed = -SCROLL_MAX_SPEED * (1 - topDist / edgeZone);
+  } else if (bottomDist < edgeZone) {
+    speed = SCROLL_MAX_SPEED * (1 - bottomDist / edgeZone);
   }
 
   if (speed === 0) return;
@@ -593,7 +586,7 @@ function setupEventListeners() {
   // ドラッグ中の自動スクロール（サイドバー全域＝ヘッダー・フッター含む）
   const sidebar = els.slideList.closest('.sidebar');
   sidebar.addEventListener('dragover', (e) => {
-    if (dragSourceIndex !== null) startDragAutoScroll(e.clientY);
+    if (dragSourceIndex !== null) startDragAutoScroll(e.clientY, sidebar);
   });
   sidebar.addEventListener('dragleave', (e) => {
     // サイドバー外に出たらスクロール停止
