@@ -546,6 +546,9 @@ function applyImageFrame() {
     // --- 拡大: overflow:visible、parentサイズ変更なし ---
     parent.style.overflow = 'visible';
     parent.style.clipPath = '';
+    // スタッキングコンテキストを生成 → 兄弟要素の上に描画される
+    parent.style.position = 'relative';
+    parent.style.zIndex = '1';
 
     activeImage.style.setProperty('position', 'relative', 'important');
     // 横: 中心基準で左右均等にはみ出す
@@ -571,6 +574,8 @@ function applyImageFrame() {
     parent.style.overflow = 'hidden';
     parent.style.clipPath = (hInset || vInset)
       ? `inset(${vInset}% ${hInset}%)` : '';
+    parent.style.position = '';
+    parent.style.zIndex = '';
 
     activeImage.style.removeProperty('position');
     activeImage.style.removeProperty('left');
