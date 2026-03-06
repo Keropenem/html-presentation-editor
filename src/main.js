@@ -843,6 +843,14 @@ function handlePrint(slidesPerPage = 1) {
   };
   const layout = layouts[slidesPerPage] || layouts[1];
 
+  // 配付資料レイアウトの寸法計算 (A4縦: 210mm x 297mm)
+  const cellW = 97;    // mm
+  const cellH = 68.6;  // mm (A4比率: 97 / 1.414)
+  const gap = 3;       // mm
+  const marginX = ((210 - (cellW * 2 + gap)) / 2).toFixed(1);
+  const marginY = 8;   // mm
+  const zoomFactor = (cellW / 297).toFixed(6);
+
   let bodyHtml = '';
   if (slidesPerPage === 1) {
     bodyHtml = state.slides.map(s =>
@@ -855,19 +863,11 @@ function handlePrint(slidesPerPage = 1) {
     }
     bodyHtml = chunks.map(chunk => {
       const cells = chunk.map(s =>
-        `<div class="grid-cell"><div class="cell-slide">${s.content}</div></div>`
+        `<div class="grid-cell"><div class="cell-slide" style="zoom:${zoomFactor}">${s.content}</div></div>`
       ).join('');
       return `<div class="handout-page">${cells}</div>`;
     }).join('');
   }
-
-  // 配付資料レイアウトの寸法計算 (A4縦: 210mm x 297mm)
-  const cellW = 97;    // mm
-  const cellH = 68.6;  // mm (A4比率: 97 / 1.414)
-  const gap = 3;       // mm
-  const marginX = ((210 - (cellW * 2 + gap)) / 2).toFixed(1); // 左右中央揃え
-  const marginY = 8;   // mm 上余白
-  const scale = (cellW / 297).toFixed(6);
 
   const css = `
     @page { size: A4 ${layout.orientation}; margin: 0; }
@@ -881,7 +881,7 @@ function handlePrint(slidesPerPage = 1) {
     .handout-page {
       width: 210mm; height: 297mm;
       page-break-after: always;
-      position: relative; overflow: hidden; background: white;
+      overflow: hidden; background: white;
       display: grid;
       grid-template-columns: repeat(${layout.cols}, ${cellW}mm);
       grid-template-rows: repeat(${layout.rows}, ${cellH}mm);
@@ -892,13 +892,10 @@ function handlePrint(slidesPerPage = 1) {
     .grid-cell {
       width: ${cellW}mm; height: ${cellH}mm;
       overflow: hidden; border: 0.5px solid #ccc;
-      position: relative; background: white;
+      background: white;
     }
     .cell-slide {
       width: 297mm; height: 210mm;
-      transform: scale(${scale});
-      transform-origin: 0 0;
-      position: absolute; top: 0; left: 0;
       overflow: hidden;
     }
     ${state.globalStyles}
