@@ -488,7 +488,8 @@ function applyImageTransform(img) {
   img.style.setProperty('transform', `scale(${zoom})`, 'important');
 }
 
-// 画像フレーム: parentサイズ不変、<100%=clip-path、>100%=overflow:visible+画像拡大
+// 画像フレーム: parentサイズ不変、clip-path(parent)でフレーム境界を定義
+// 拡大=負inset、縮小=正inset → ズームもclip-pathで自動制約
 function applyImageFrame() {
   if (!activeImage || !activeImage.parentElement) return;
   const parent = activeImage.parentElement;
@@ -521,15 +522,25 @@ function applyImageFrame() {
   activeImage.style.setProperty('width', imgW + '%', 'important');
   activeImage.style.setProperty('height', imgH + '%', 'important');
 
-  // clip-path inset（縮小次元のみ、正値のみ）
-  const hInset = wPct < 100 ? (100 - wPct) / 2 : 0;
-  const vInset = hPct < 100 ? (100 - hPct) / 2 : 0;
+  // フレーム境界: clip-path inset（parent上で統一管理）
+  // 正値=内側クリップ（縮小）、負値=外側拡張（拡大）
+  const cpTop    = hPct < 100 ? (100 - hPct) / 2 : 0;
+  const cpBottom = hPct < 100 ? (100 - hPct) / 2 : -(hPct - 100);
+  const cpLeft   = wPct < 100 ? (100 - wPct) / 2 : -(wPct - 100) / 2;
+  const cpRight  = wPct < 100 ? (100 - wPct) / 2 : -(wPct - 100) / 2;
+
+  parent.style.overflow = isExpanding ? 'visible' : 'hidden';
+
+  if (cpTop || cpBottom || cpLeft || cpRight) {
+    parent.style.clipPath = `inset(${cpTop}% ${cpRight}% ${cpBottom}% ${cpLeft}%)`;
+  } else {
+    parent.style.clipPath = '';
+  }
+
+  // 画像のclip-pathはクリア（parentで一元管理）
+  activeImage.style.removeProperty('clip-path');
 
   if (isExpanding) {
-    // --- 拡大: overflow:visible、parentサイズ変更なし ---
-    parent.style.overflow = 'visible';
-    parent.style.clipPath = '';
-
     activeImage.style.setProperty('position', 'relative', 'important');
     // 横: 中心基準で左右均等にはみ出す
     activeImage.style.setProperty('left',
@@ -537,28 +548,14 @@ function applyImageFrame() {
     // 縦: 下方向のみ伸ばす
     activeImage.style.setProperty('top', '0', 'important');
 
-    // 縮小次元がある場合はIMAGEにclip-path（例: 幅150%高さ80%）
-    if (hInset || vInset) {
-      activeImage.style.setProperty('clip-path',
-        `inset(${vInset}% ${hInset}%)`, 'important');
-    } else {
-      activeImage.style.removeProperty('clip-path');
-    }
-
     // 高さ拡大時: margin-bottomで後続を押し下げ
     if (hPct > 100) {
       parent.style.marginBottom = (origH * (hPct - 100) / 100) + 'px';
     }
   } else {
-    // --- 縮小/通常: clip-path(parent) + overflow:hidden ---
-    parent.style.overflow = 'hidden';
-    parent.style.clipPath = (hInset || vInset)
-      ? `inset(${vInset}% ${hInset}%)` : '';
-
     activeImage.style.removeProperty('position');
     activeImage.style.removeProperty('left');
     activeImage.style.removeProperty('top');
-    activeImage.style.removeProperty('clip-path');
   }
 
   // ボックス位置
@@ -571,11 +568,8 @@ function applyImageFrame() {
   saveCurrentSlideState();
 
   // 編集インジケータ（save後に適用 → innerHTMLに含まれない）
-  if (isExpanding) {
-    activeImage.style.setProperty('filter', IMG_EDIT_FILTER, 'important');
-  } else {
-    parent.style.filter = IMG_EDIT_FILTER;
-  }
+  // drop-shadowはclip-path形状に追従 → フレーム形の枠になる
+  parent.style.filter = IMG_EDIT_FILTER;
 }
 
 function saveCurrentSlideState() {
