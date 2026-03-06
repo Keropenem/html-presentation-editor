@@ -565,6 +565,9 @@ function applyImageFrame() {
     parent.style.overflow = 'visible';
 
     // 画像: 拡大分だけ広げ、逆scaleで引き伸ばし打消し
+    // max-width:none 必須（スライドCSSの img{max-width:100%} を打ち消す）
+    activeImage.style.setProperty('max-width', 'none', 'important');
+    activeImage.style.setProperty('max-height', 'none', 'important');
     activeImage.style.setProperty('width', Math.max(wPct, 100) + '%', 'important');
     activeImage.style.setProperty('height', Math.max(hPct, 100) + '%', 'important');
     const invParts = [];
@@ -591,6 +594,8 @@ function applyImageFrame() {
     }
   } else {
     // --- 縮小/通常: clip-path(parent) + overflow:hidden ---
+    activeImage.style.removeProperty('max-width');
+    activeImage.style.removeProperty('max-height');
     activeImage.style.setProperty('width', '100%', 'important');
     activeImage.style.setProperty('height', '100%', 'important');
     activeImage.style.removeProperty('transform');
