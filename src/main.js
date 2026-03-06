@@ -124,15 +124,23 @@ const SCROLL_MAX_SPEED = 5;  // 最大スクロール速度 (px/frame)
 function startDragAutoScroll(clientY) {
   cancelDragAutoScroll();
   const rect = els.slideList.getBoundingClientRect();
-  const topDist = clientY - rect.top;
-  const bottomDist = rect.bottom - clientY;
 
   let speed = 0;
-  if (topDist < SCROLL_EDGE_PX && topDist >= 0) {
-    // 端に近いほど速く（線形補間）
-    speed = -SCROLL_MAX_SPEED * (1 - topDist / SCROLL_EDGE_PX);
-  } else if (bottomDist < SCROLL_EDGE_PX && bottomDist >= 0) {
-    speed = SCROLL_MAX_SPEED * (1 - bottomDist / SCROLL_EDGE_PX);
+  if (clientY < rect.top) {
+    // リストより上（ヘッダー等）→ 最大速度で上スクロール
+    speed = -SCROLL_MAX_SPEED;
+  } else if (clientY > rect.bottom) {
+    // リストより下（フッター等）→ 最大速度で下スクロール
+    speed = SCROLL_MAX_SPEED;
+  } else {
+    // リスト内の端付近 → 距離に応じた速度
+    const topDist = clientY - rect.top;
+    const bottomDist = rect.bottom - clientY;
+    if (topDist < SCROLL_EDGE_PX) {
+      speed = -SCROLL_MAX_SPEED * (1 - topDist / SCROLL_EDGE_PX);
+    } else if (bottomDist < SCROLL_EDGE_PX) {
+      speed = SCROLL_MAX_SPEED * (1 - bottomDist / SCROLL_EDGE_PX);
+    }
   }
 
   if (speed === 0) return;
@@ -582,12 +590,16 @@ function updateThumbnail(index) {
 }
 
 function setupEventListeners() {
-  // ドラッグ中の自動スクロール（スライドリスト上端・下端付近）
-  els.slideList.addEventListener('dragover', (e) => {
+  // ドラッグ中の自動スクロール（サイドバー全域＝ヘッダー・フッター含む）
+  const sidebar = els.slideList.closest('.sidebar');
+  sidebar.addEventListener('dragover', (e) => {
     if (dragSourceIndex !== null) startDragAutoScroll(e.clientY);
   });
-  els.slideList.addEventListener('dragleave', () => cancelDragAutoScroll());
-  els.slideList.addEventListener('drop', () => cancelDragAutoScroll());
+  sidebar.addEventListener('dragleave', (e) => {
+    // サイドバー外に出たらスクロール停止
+    if (!sidebar.contains(e.relatedTarget)) cancelDragAutoScroll();
+  });
+  sidebar.addEventListener('drop', () => cancelDragAutoScroll());
 
   // インポート
   els.btnPaste.addEventListener('click', () => {
