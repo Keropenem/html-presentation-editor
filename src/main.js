@@ -843,6 +843,11 @@ function handlePrint(slidesPerPage = 1) {
   };
   const layout = layouts[slidesPerPage] || layouts[1];
 
+  // globalStylesから@pageルールとbody/htmlルールを除去（印刷CSS競合防止）
+  const printSafeStyles = state.globalStyles
+    .replace(/@page\s*\{[^}]*\}/gi, '')
+    .replace(/(?:^|\})\s*(?:html|body)\s*\{[^}]*\}/gi, '}');
+
   // 配付資料レイアウトの寸法計算 (A4縦: 210mm x 297mm)
   const cellW = 97;    // mm
   const cellH = 68.6;  // mm (A4比率: 97 / 1.414)
@@ -898,7 +903,7 @@ function handlePrint(slidesPerPage = 1) {
       width: 297mm; height: 210mm;
       overflow: hidden;
     }
-    ${state.globalStyles}
+    ${printSafeStyles}
   `;
 
   doc.open();
