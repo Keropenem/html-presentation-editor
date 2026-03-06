@@ -500,35 +500,20 @@ function applyImageTransform(img) {
     img.style.removeProperty('object-view-box');
   }
 
-  // transform は applyImageFrame の逆スケール用に管理するため、ここでは触らない
+  // transform:scaleは使わない（旧スタイルのクリーンアップ）
+  img.style.removeProperty('transform');
+  img.style.removeProperty('transform-origin');
 }
 
-// 画像フレーム: <100%=clip-path(parent)、>100%=transform:scale(parent)+逆スケール(image)
-// transform はレイアウトに影響しない → 兄弟要素のサイズ不変
-// 画像は引き伸ばさず、object-fit:cover の表示範囲を広げる
+// 画像フレーム: <100%=clip-path(parent)、>100%=transform:scale(parent)
+// transform はレイアウトに影響しないので兄弟要素のサイズ不変
 function applyImageFrame() {
   if (!activeImage || !activeImage.parentElement) return;
   const parent = activeImage.parentElement;
 
-  let wPct = parseFloat(els.inputImgWidth.value);
-  let hPct = parseFloat(els.inputImgHeight.value);
+  const wPct = parseFloat(els.inputImgWidth.value);
+  const hPct = parseFloat(els.inputImgHeight.value);
   const origH = parseFloat(parent.dataset.origH) || parent.offsetHeight;
-
-  // --- 最大フレーム幅/高さを計算（画像全体が見える限界） ---
-  const imgNatW = activeImage.naturalWidth;
-  const imgNatH = activeImage.naturalHeight;
-  const parentW = parseFloat(parent.dataset.origW) || parent.offsetWidth;
-  const parentH = origH;
-  if (imgNatW && imgNatH && parentW && parentH) {
-    const imgAR = imgNatW / imgNatH;
-    const parentAR = parentW / parentH;
-    // object-fit:cover の水平クロップが解消されるフレーム幅
-    const maxW = Math.max(100, Math.round(imgAR / parentAR * 100));
-    // object-fit:cover の垂直クロップが解消されるフレーム高さ
-    const maxH = Math.max(100, Math.round(parentAR / imgAR * 100));
-    if (wPct > maxW) { wPct = maxW; els.inputImgWidth.value = wPct; els.valImgWidth.value = wPct; }
-    if (hPct > maxH) { hPct = maxH; els.inputImgHeight.value = hPct; els.valImgHeight.value = hPct; }
-  }
 
   // data属性に保存（復元用）
   parent.dataset.frameW = wPct;
@@ -551,30 +536,22 @@ function applyImageFrame() {
   parent.style.visibility = '';
   parent.style.position = '';
   parent.style.zIndex = '';
+  activeImage.style.setProperty('width', '100%', 'important');
+  activeImage.style.setProperty('height', '100%', 'important');
+  activeImage.style.removeProperty('position');
+  activeImage.style.removeProperty('left');
+  activeImage.style.removeProperty('top');
+  activeImage.style.removeProperty('visibility');
 
   // clip-path inset（縮小次元のみ）
   const hInset = wPct < 100 ? (100 - wPct) / 2 : 0;
   const vInset = hPct < 100 ? (100 - hPct) / 2 : 0;
 
   if (isExpanding) {
-    // --- 拡大: parentをtransform:scaleで視覚的に拡大 ---
+    // --- 拡大: transform:scale でparentごと拡大 ---
+    // レイアウトに影響しない・背景/ボーダーも一緒に拡大される
     const scaleX = Math.max(wPct, 100) / 100;
     const scaleY = Math.max(hPct, 100) / 100;
-
-    // 画像: 拡大分だけwidthを広げ、逆スケールで引き伸ばしを打ち消す
-    // → object-fit:coverがより多くの画像内容を表示する
-    activeImage.style.setProperty('width', Math.max(wPct, 100) + '%', 'important');
-    activeImage.style.setProperty('height', Math.max(hPct, 100) + '%', 'important');
-    const invParts = [];
-    if (scaleX !== 1) invParts.push(`scaleX(${1 / scaleX})`);
-    if (scaleY !== 1) invParts.push(`scaleY(${1 / scaleY})`);
-    if (invParts.length) {
-      activeImage.style.setProperty('transform', invParts.join(' '), 'important');
-      activeImage.style.setProperty('transform-origin', 'left top', 'important');
-    } else {
-      activeImage.style.removeProperty('transform');
-      activeImage.style.removeProperty('transform-origin');
-    }
 
     // 縮小次元がある場合はparentにclip-path
     if (hInset || vInset) {
@@ -589,13 +566,10 @@ function applyImageFrame() {
     }
   } else {
     // --- 縮小/通常: clip-path(parent) + overflow:hidden ---
-    activeImage.style.setProperty('width', '100%', 'important');
-    activeImage.style.setProperty('height', '100%', 'important');
-    activeImage.style.removeProperty('transform');
-    activeImage.style.removeProperty('transform-origin');
     parent.style.overflow = 'hidden';
     parent.style.clipPath = (hInset || vInset)
       ? `inset(${vInset}% ${hInset}%)` : '';
+    activeImage.style.removeProperty('clip-path');
   }
 
   // ボックス位置 + スケール
@@ -607,6 +581,7 @@ function applyImageFrame() {
   if (posX || posY) parts.push(`translate(${posX}px, ${posY}px)`);
   if (scaleX !== 1 || scaleY !== 1) parts.push(`scale(${scaleX}, ${scaleY})`);
   parent.style.transform = parts.join(' ') || '';
+  // 拡大時: 中心基準でスケール
   parent.style.transformOrigin = isExpanding ? 'center top' : '';
 
   saveCurrentSlideState();
