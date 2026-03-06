@@ -196,6 +196,63 @@
       </div>
     </div>
 
+    <!-- Print Settings Modal -->
+    <div id="print-modal" class="modal-overlay hidden">
+      <div class="modal-content" style="max-width: 560px;">
+        <div class="modal-header">
+          <h2>印刷 / PDF保存 設定</h2>
+          <button id="btn-close-print-modal" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+          <p style="margin-bottom: 1.2rem; color: #ccc;">1ページあたりのスライド数を選択してください。</p>
+          <div class="print-layout-options">
+            <label class="print-layout-card active" data-layout="1">
+              <input type="radio" name="print-layout" value="1" checked>
+              <div class="layout-preview layout-preview-1">
+                <div class="lp-slide"></div>
+              </div>
+              <span class="layout-label">1枚 / ページ</span>
+              <span class="layout-sub">A4 横向き</span>
+            </label>
+            <label class="print-layout-card" data-layout="4">
+              <input type="radio" name="print-layout" value="4">
+              <div class="layout-preview layout-preview-4">
+                <div class="lp-slide"></div><div class="lp-slide"></div>
+                <div class="lp-slide"></div><div class="lp-slide"></div>
+              </div>
+              <span class="layout-label">4枚 / ページ</span>
+              <span class="layout-sub">A4 縦向き</span>
+            </label>
+            <label class="print-layout-card" data-layout="6">
+              <input type="radio" name="print-layout" value="6">
+              <div class="layout-preview layout-preview-6">
+                <div class="lp-slide"></div><div class="lp-slide"></div>
+                <div class="lp-slide"></div><div class="lp-slide"></div>
+                <div class="lp-slide"></div><div class="lp-slide"></div>
+              </div>
+              <span class="layout-label">6枚 / ページ</span>
+              <span class="layout-sub">A4 縦向き</span>
+            </label>
+            <label class="print-layout-card" data-layout="8">
+              <input type="radio" name="print-layout" value="8">
+              <div class="layout-preview layout-preview-8">
+                <div class="lp-slide"></div><div class="lp-slide"></div>
+                <div class="lp-slide"></div><div class="lp-slide"></div>
+                <div class="lp-slide"></div><div class="lp-slide"></div>
+                <div class="lp-slide"></div><div class="lp-slide"></div>
+              </div>
+              <span class="layout-label">8枚 / ページ</span>
+              <span class="layout-sub">A4 縦向き</span>
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-print-cancel" class="btn btn-ghost">キャンセル</button>
+          <button id="btn-print-confirm" class="btn btn-primary"><i class="fa-solid fa-print"></i> 印刷する</button>
+        </div>
+      </div>
+    </div>
+
     <div id="modal-overlay" class="modal-overlay hidden">
       <div class="modal-content">
         <div class="modal-header">

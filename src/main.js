@@ -101,7 +101,12 @@ const els = {
   fileInputImage: document.getElementById('file-input-image'),
 
   // 印刷
-  printFrame: document.getElementById('print-frame')
+  printFrame: document.getElementById('print-frame'),
+  printModal: document.getElementById('print-modal'),
+  btnPrintConfirm: document.getElementById('btn-print-confirm'),
+  btnPrintCancel: document.getElementById('btn-print-cancel'),
+  btnClosePrintModal: document.getElementById('btn-close-print-modal'),
+  printLayoutCards: document.querySelectorAll('.print-layout-card'),
 };
 
 let activeImage = null; // 現在編集中の画像要素（Shadow DOM内）
@@ -771,7 +776,21 @@ function setupEventListeners() {
   els.btnExportCancel.addEventListener('click', () => els.exportModal.classList.add('hidden'));
   els.btnCloseExportModal.addEventListener('click', () => els.exportModal.classList.add('hidden'));
 
-  els.btnPrint.addEventListener('click', handlePrint);
+  // 印刷設定モーダル
+  els.btnPrint.addEventListener('click', () => els.printModal.classList.remove('hidden'));
+  els.printLayoutCards.forEach(card => {
+    card.addEventListener('click', () => {
+      els.printLayoutCards.forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+    });
+  });
+  els.btnPrintConfirm.addEventListener('click', () => {
+    const selected = document.querySelector('input[name="print-layout"]:checked');
+    els.printModal.classList.add('hidden');
+    handlePrint(parseInt(selected.value));
+  });
+  els.btnPrintCancel.addEventListener('click', () => els.printModal.classList.add('hidden'));
+  els.btnClosePrintModal.addEventListener('click', () => els.printModal.classList.add('hidden'));
 
   window.addEventListener('keydown', (e) => {
     const isEditing = e.target.isContentEditable ||
@@ -812,12 +831,81 @@ function updateZoom() {
   container.style.left = '50%'; container.style.top = '50%'; container.style.position = 'absolute';
 }
 
-function handlePrint() {
+function handlePrint(slidesPerPage = 1) {
   const iframe = els.printFrame;
   const doc = iframe.contentWindow.document;
-  const slidesHtml = state.slides.map(s => `<div class="print-page">${s.content}</div>`).join('');
+
+  const layouts = {
+    1: { orientation: 'landscape', cols: 1, rows: 1 },
+    4: { orientation: 'portrait',  cols: 2, rows: 2 },
+    6: { orientation: 'portrait',  cols: 2, rows: 3 },
+    8: { orientation: 'portrait',  cols: 2, rows: 4 },
+  };
+  const layout = layouts[slidesPerPage] || layouts[1];
+
+  let bodyHtml = '';
+  if (slidesPerPage === 1) {
+    bodyHtml = state.slides.map(s =>
+      `<div class="print-page">${s.content}</div>`
+    ).join('');
+  } else {
+    const chunks = [];
+    for (let i = 0; i < state.slides.length; i += slidesPerPage) {
+      chunks.push(state.slides.slice(i, i + slidesPerPage));
+    }
+    bodyHtml = chunks.map(chunk => {
+      const cells = chunk.map(s =>
+        `<div class="grid-cell"><div class="cell-slide">${s.content}</div></div>`
+      ).join('');
+      return `<div class="handout-page">${cells}</div>`;
+    }).join('');
+  }
+
+  // 配付資料レイアウトの寸法計算 (A4縦: 210mm x 297mm)
+  const cellW = 97;    // mm
+  const cellH = 68.6;  // mm (A4比率: 97 / 1.414)
+  const gap = 3;       // mm
+  const marginX = ((210 - (cellW * 2 + gap)) / 2).toFixed(1); // 左右中央揃え
+  const marginY = 8;   // mm 上余白
+  const scale = (cellW / 297).toFixed(6);
+
+  const css = `
+    @page { size: A4 ${layout.orientation}; margin: 0; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 0; }
+    .print-page {
+      width: 297mm; height: 210mm;
+      page-break-after: always;
+      position: relative; overflow: hidden; background: white;
+    }
+    .handout-page {
+      width: 210mm; height: 297mm;
+      page-break-after: always;
+      position: relative; overflow: hidden; background: white;
+      display: grid;
+      grid-template-columns: repeat(${layout.cols}, ${cellW}mm);
+      grid-template-rows: repeat(${layout.rows}, ${cellH}mm);
+      gap: ${gap}mm;
+      padding: ${marginY}mm ${marginX}mm;
+      align-content: start;
+    }
+    .grid-cell {
+      width: ${cellW}mm; height: ${cellH}mm;
+      overflow: hidden; border: 0.5px solid #ccc;
+      position: relative; background: white;
+    }
+    .cell-slide {
+      width: 297mm; height: 210mm;
+      transform: scale(${scale});
+      transform-origin: 0 0;
+      position: absolute; top: 0; left: 0;
+      overflow: hidden;
+    }
+    ${state.globalStyles}
+  `;
+
   doc.open();
-  doc.write(`<html><head><style>@page { size: A4 landscape; margin: 0; } body { margin: 0; } .print-page { width: 297mm; height: 210mm; page-break-after: always; position: relative; overflow: hidden; background: white; } ${state.globalStyles}</style></head><body>${slidesHtml}</body></html>`);
+  doc.write(`<html><head><style>${css}</style></head><body>${bodyHtml}</body></html>`);
   doc.close();
   setTimeout(() => { iframe.contentWindow.focus(); iframe.contentWindow.print(); }, 500);
 }
