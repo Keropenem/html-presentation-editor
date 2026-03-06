@@ -343,33 +343,49 @@ function selectImageForEdit(img) {
   els.cropX.value = img.dataset.cropX || 0;
   els.cropY.value = img.dataset.cropY || 0;
 
-  // 画像が親要素を埋めるようにする（幅変更が効くために必要）
+  // 画像が親要素を埋めるようにする（フレーム変更が効くために必要）
   applyImageTransform(img);
 
   // 親要素のサイズ・位置を読み取り
   const parent = img.parentElement;
   if (parent) {
-    const pStyle = window.getComputedStyle(parent);
-    // 幅・高さ: inlineスタイルの%値、なければ100%
-    const w = parent.style.width && parent.style.width.includes('%')
-      ? parseInt(parent.style.width) : 100;
-    const h = parent.style.height && parent.style.height.includes('%')
-      ? parseInt(parent.style.height) : 100;
-    els.inputImgWidth.value = w;
-    els.valImgWidth.value = w;
-    els.inputImgHeight.value = h;
-    els.valImgHeight.value = h;
+    // 初回: 元のサイズを記録し、明示的なpx寸法を設定
+    if (!parent.dataset.origW) {
+      parent.dataset.origW = parent.offsetWidth;
+      parent.dataset.origH = parent.offsetHeight;
+      parent.style.width = parent.offsetWidth + 'px';
+      parent.style.height = parent.offsetHeight + 'px';
+    }
 
-    let imgPosX = 0, imgPosY = 0;
+    const origW = parseFloat(parent.dataset.origW);
+    const origH = parseFloat(parent.dataset.origH);
+
+    // 現在の幅・高さをパーセンテージに変換
+    const currentW = parseFloat(parent.style.width) || origW;
+    const currentH = parseFloat(parent.style.height) || origH;
+    const wPct = Math.round(currentW / origW * 100);
+    const hPct = Math.round(currentH / origH * 100);
+    els.inputImgWidth.value = wPct;
+    els.valImgWidth.value = wPct;
+    els.inputImgHeight.value = hPct;
+    els.valImgHeight.value = hPct;
+
+    // transformからセンターオフセットを差し引いてボックス位置を取得
+    const centerOffsetX = (origW - currentW) / 2;
+    const centerOffsetY = (origH - currentH) / 2;
+    let totalX = 0, totalY = 0;
+    const pStyle = window.getComputedStyle(parent);
     const ptx = pStyle.transform;
     if (ptx && ptx !== 'none') {
       const m = ptx.match(/matrix\(([^)]+)\)/);
       if (m) {
         const vals = m[1].split(',').map(Number);
-        imgPosX = Math.round(vals[4]) || 0;
-        imgPosY = Math.round(vals[5]) || 0;
+        totalX = vals[4] || 0;
+        totalY = vals[5] || 0;
       }
     }
+    const imgPosX = Math.round(totalX - centerOffsetX);
+    const imgPosY = Math.round(totalY - centerOffsetY);
     els.inputImgPosY.value = imgPosY;
     els.valImgPosY.value = imgPosY;
     els.inputImgPosX.value = imgPosX;
@@ -815,29 +831,33 @@ function setupEventListeners() {
 
   els.btnCloseTextPanel.addEventListener('click', closeTextPanelFunc);
 
-  // 画像ボックス: 幅・高さ・位置
-  bindSliderAndInput(els.inputImgWidth, els.valImgWidth, (v) => {
+  // 画像フレーム: 幅・高さ・位置を統合管理（中心基準リサイズ）
+  function applyImageFrame() {
     if (!activeImage || !activeImage.parentElement) return;
-    activeImage.parentElement.style.width = v + '%';
-    saveCurrentSlideState();
-  });
+    const parent = activeImage.parentElement;
+    const origW = parseFloat(parent.dataset.origW);
+    const origH = parseFloat(parent.dataset.origH);
+    if (!origW || !origH) return;
 
-  bindSliderAndInput(els.inputImgHeight, els.valImgHeight, (v) => {
-    if (!activeImage || !activeImage.parentElement) return;
-    activeImage.parentElement.style.height = v + '%';
-    saveCurrentSlideState();
-  });
+    const newW = origW * parseFloat(els.inputImgWidth.value) / 100;
+    const newH = origH * parseFloat(els.inputImgHeight.value) / 100;
+    parent.style.width = newW + 'px';
+    parent.style.height = newH + 'px';
 
-  function applyImageBoxPosition() {
-    if (!activeImage || !activeImage.parentElement) return;
-    const y = els.inputImgPosY.value || 0;
-    const x = els.inputImgPosX.value || 0;
-    activeImage.parentElement.style.transform = `translate(${x}px, ${y}px)`;
+    // 中心基準: サイズ変化分の半分をオフセット
+    const centerOffsetX = (origW - newW) / 2;
+    const centerOffsetY = (origH - newH) / 2;
+
+    const posX = parseFloat(els.inputImgPosX.value) || 0;
+    const posY = parseFloat(els.inputImgPosY.value) || 0;
+    parent.style.transform = `translate(${posX + centerOffsetX}px, ${posY + centerOffsetY}px)`;
     saveCurrentSlideState();
   }
 
-  bindSliderAndInput(els.inputImgPosY, els.valImgPosY, () => applyImageBoxPosition());
-  bindSliderAndInput(els.inputImgPosX, els.valImgPosX, () => applyImageBoxPosition());
+  bindSliderAndInput(els.inputImgWidth, els.valImgWidth, () => applyImageFrame());
+  bindSliderAndInput(els.inputImgHeight, els.valImgHeight, () => applyImageFrame());
+  bindSliderAndInput(els.inputImgPosY, els.valImgPosY, () => applyImageFrame());
+  bindSliderAndInput(els.inputImgPosX, els.valImgPosX, () => applyImageFrame());
 
   // リセットボタン: スライダーをデフォルト値に戻す
   document.querySelectorAll('.btn-reset').forEach(btn => {
