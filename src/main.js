@@ -118,7 +118,7 @@ function clearDragIndicators() {
 }
 
 // ドラッグ中の自動スクロール
-const SCROLL_MAX_SPEED = 5;    // 最大スクロール速度 (px/frame)
+const SCROLL_MAX_SPEED = 10;   // 最大スクロール速度 (px/frame)
 const SCROLL_ZONE_RATIO = 0.3; // サイドバー上下30%がスクロール域
 
 function startDragAutoScroll(clientY, sidebarEl) {
