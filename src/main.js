@@ -82,8 +82,6 @@ const els = {
   btnTextItalic: document.getElementById('btn-text-italic'),
   btnTextUnderline: document.getElementById('btn-text-underline'),
   colorSwatches: document.querySelectorAll('.color-swatch'),
-  inputSelFontSize: document.getElementById('input-sel-fontsize'),
-  valSelFontSize: document.getElementById('val-sel-fontsize'),
 
   // テキストボックスパネル（ブロック要素用）
   textPanel: document.getElementById('text-editor-panel'),
@@ -771,62 +769,6 @@ function setupEventListeners() {
       document.execCommand('foreColor', false, color);
       saveCurrentSlideState();
     });
-  });
-
-  // 選択テキストの文字サイズ変更（execCommand fontSize + 後処理）
-  function applySelFontSize(sizePx) {
-    document.execCommand('styleWithCSS', false, true);
-    document.execCommand('fontSize', false, '7');
-    const frame = mainRenderer.shadow.querySelector('.slide-frame');
-    if (frame) {
-      frame.querySelectorAll('span').forEach(span => {
-        const fs = span.style.fontSize;
-        if (fs && (fs.includes('xxx-large') || fs === '-webkit-xxx-large')) {
-          span.style.fontSize = sizePx + 'px';
-        }
-      });
-      frame.querySelectorAll('font[size="7"]').forEach(font => {
-        const span = document.createElement('span');
-        span.style.fontSize = sizePx + 'px';
-        span.innerHTML = font.innerHTML;
-        font.replaceWith(span);
-      });
-    }
-    saveCurrentSlideState();
-  }
-
-  // スライダー → 数値入力同期 + 適用
-  els.inputSelFontSize.addEventListener('mousedown', (e) => e.preventDefault());
-  els.inputSelFontSize.addEventListener('input', (e) => {
-    els.valSelFontSize.value = e.target.value;
-    applySelFontSize(e.target.value);
-  });
-
-  // 数値入力 → スライダー同期 + 適用（選択を保存/復元）
-  let savedSelRange = null;
-  els.valSelFontSize.addEventListener('focus', () => {
-    const sel = typeof mainRenderer.shadow.getSelection === 'function'
-      ? mainRenderer.shadow.getSelection()
-      : document.getSelection();
-    if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
-      savedSelRange = sel.getRangeAt(0).cloneRange();
-    }
-  });
-  els.valSelFontSize.addEventListener('change', (e) => {
-    const sizePx = parseInt(e.target.value) || 16;
-    e.target.value = sizePx;
-    els.inputSelFontSize.value = sizePx;
-    if (savedSelRange) {
-      const frame = mainRenderer.shadow.querySelector('.slide-frame');
-      if (frame) frame.focus();
-      const sel = typeof mainRenderer.shadow.getSelection === 'function'
-        ? mainRenderer.shadow.getSelection()
-        : document.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(savedSelRange);
-      savedSelRange = null;
-      applySelFontSize(sizePx);
-    }
   });
 
   // === ブロック編集パネル（テキストボックス用） ===
