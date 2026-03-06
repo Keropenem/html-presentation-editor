@@ -380,6 +380,7 @@ body {
   font-size: 0.75rem;
   color: var(--text-secondary);
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .control-group input[type="range"] {
