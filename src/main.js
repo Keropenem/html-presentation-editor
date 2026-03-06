@@ -343,6 +343,9 @@ function selectImageForEdit(img) {
   els.cropX.value = img.dataset.cropX || 0;
   els.cropY.value = img.dataset.cropY || 0;
 
+  // 画像が親要素を埋めるようにする（幅変更が効くために必要）
+  applyImageTransform(img);
+
   // 親要素のサイズ・位置を読み取り
   const parent = img.parentElement;
   if (parent) {
@@ -835,6 +838,25 @@ function setupEventListeners() {
 
   bindSliderAndInput(els.inputImgPosY, els.valImgPosY, () => applyImageBoxPosition());
   bindSliderAndInput(els.inputImgPosX, els.valImgPosX, () => applyImageBoxPosition());
+
+  // リセットボタン: スライダーをデフォルト値に戻す
+  document.querySelectorAll('.btn-reset').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const sliderId = btn.dataset.slider;
+      const valId = btn.dataset.val;
+      const defaultVal = btn.dataset.default;
+      const slider = document.getElementById(sliderId);
+      if (slider) {
+        slider.value = defaultVal;
+        slider.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      if (valId) {
+        const valInput = document.getElementById(valId);
+        if (valInput) valInput.value = defaultVal;
+      }
+    });
+  });
 
   // エクスポート
   els.btnExportHtml.addEventListener('click', () => els.exportModal.classList.remove('hidden'));

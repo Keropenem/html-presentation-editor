@@ -489,6 +489,23 @@ body {
   margin-left: 0.1rem;
 }
 
+/* --- Reset Button --- */
+.btn-reset {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.6rem;
+  padding: 0 0.2rem;
+  opacity: 0.5;
+  transition: opacity 0.15s, color 0.15s;
+  vertical-align: middle;
+}
+.btn-reset:hover {
+  opacity: 1;
+  color: var(--pri-color);
+}
+
 /* --- Print Layout Modal --- */
 .print-layout-options {
   display: grid;
