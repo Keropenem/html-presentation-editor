@@ -67,6 +67,14 @@ const els = {
   cropY: document.getElementById('input-crop-y'),
   btnCloseImagePanel: document.getElementById('btn-close-image-panel'),
   btnChangeImageAlt: document.getElementById('btn-change-image-alt'),
+  inputImgWidth: document.getElementById('input-img-width'),
+  valImgWidth: document.getElementById('val-img-width'),
+  inputImgHeight: document.getElementById('input-img-height'),
+  valImgHeight: document.getElementById('val-img-height'),
+  inputImgPosX: document.getElementById('input-img-pos-x'),
+  valImgPosX: document.getElementById('val-img-pos-x'),
+  inputImgPosY: document.getElementById('input-img-pos-y'),
+  valImgPosY: document.getElementById('val-img-pos-y'),
 
   // テキスト書式パネル（選択テキスト用）
   textFormatPanel: document.getElementById('text-format-panel'),
@@ -83,10 +91,10 @@ const els = {
   valFontSize: document.getElementById('val-fontsize'),
   inputTextLineHeight: document.getElementById('input-text-lineheight'),
   valLineHeight: document.getElementById('val-lineheight'),
-  inputTextMarginTop: document.getElementById('input-text-margin-top'),
-  valMarginTop: document.getElementById('val-margin-top'),
-  inputTextMarginBottom: document.getElementById('input-text-margin-bottom'),
-  valMarginBottom: document.getElementById('val-margin-bottom'),
+  inputTextPosY: document.getElementById('input-text-pos-y'),
+  valTextPosY: document.getElementById('val-text-pos-y'),
+  inputTextPosX: document.getElementById('input-text-pos-x'),
+  valTextPosX: document.getElementById('val-text-pos-x'),
   btnCloseTextPanel: document.getElementById('btn-close-text-panel'),
 
   // エクスポートモーダル
@@ -335,6 +343,28 @@ function selectImageForEdit(img) {
   els.cropX.value = img.dataset.cropX || 0;
   els.cropY.value = img.dataset.cropY || 0;
 
+  // 親要素のサイズ・位置を読み取り
+  const parent = img.parentElement;
+  if (parent) {
+    const pStyle = window.getComputedStyle(parent);
+    // 幅・高さ: inlineスタイルの%値、なければ100%
+    const w = parent.style.width && parent.style.width.includes('%')
+      ? parseInt(parent.style.width) : 100;
+    const h = parent.style.height && parent.style.height.includes('%')
+      ? parseInt(parent.style.height) : 100;
+    els.inputImgWidth.value = w;
+    els.valImgWidth.value = w;
+    els.inputImgHeight.value = h;
+    els.valImgHeight.value = h;
+
+    const posY = Math.round(parseFloat(pStyle.marginTop)) || 0;
+    const posX = Math.round(parseFloat(pStyle.marginLeft)) || 0;
+    els.inputImgPosY.value = posY;
+    els.valImgPosY.value = posY;
+    els.inputImgPosX.value = posX;
+    els.valImgPosX.value = posX;
+  }
+
   els.imagePanel.classList.remove('hidden');
 }
 
@@ -363,13 +393,13 @@ function selectTextForEdit(el) {
   els.inputTextLineHeight.value = lh.toFixed(1);
   els.valLineHeight.value = lh.toFixed(1);
 
-  // 上下余白
+  // 上下・左右位置
   const mt = Math.round(parseFloat(style.marginTop)) || 0;
-  const mb = Math.round(parseFloat(style.marginBottom)) || 0;
-  els.inputTextMarginTop.value = mt;
-  els.valMarginTop.value = mt;
-  els.inputTextMarginBottom.value = mb;
-  els.valMarginBottom.value = mb;
+  const ml = Math.round(parseFloat(style.marginLeft)) || 0;
+  els.inputTextPosY.value = mt;
+  els.valTextPosY.value = mt;
+  els.inputTextPosX.value = ml;
+  els.valTextPosX.value = ml;
 
   els.textPanel.classList.remove('hidden');
 }
@@ -753,19 +783,44 @@ function setupEventListeners() {
     saveCurrentSlideState();
   });
 
-  bindSliderAndInput(els.inputTextMarginTop, els.valMarginTop, (v) => {
+  bindSliderAndInput(els.inputTextPosY, els.valTextPosY, (v) => {
     if (!activeTextElement) return;
     activeTextElement.style.marginTop = v + 'px';
     saveCurrentSlideState();
   });
 
-  bindSliderAndInput(els.inputTextMarginBottom, els.valMarginBottom, (v) => {
+  bindSliderAndInput(els.inputTextPosX, els.valTextPosX, (v) => {
     if (!activeTextElement) return;
-    activeTextElement.style.marginBottom = v + 'px';
+    activeTextElement.style.marginLeft = v + 'px';
     saveCurrentSlideState();
   });
 
   els.btnCloseTextPanel.addEventListener('click', closeTextPanelFunc);
+
+  // 画像ボックス: 幅・高さ・位置
+  bindSliderAndInput(els.inputImgWidth, els.valImgWidth, (v) => {
+    if (!activeImage || !activeImage.parentElement) return;
+    activeImage.parentElement.style.width = v + '%';
+    saveCurrentSlideState();
+  });
+
+  bindSliderAndInput(els.inputImgHeight, els.valImgHeight, (v) => {
+    if (!activeImage || !activeImage.parentElement) return;
+    activeImage.parentElement.style.height = v + '%';
+    saveCurrentSlideState();
+  });
+
+  bindSliderAndInput(els.inputImgPosY, els.valImgPosY, (v) => {
+    if (!activeImage || !activeImage.parentElement) return;
+    activeImage.parentElement.style.marginTop = v + 'px';
+    saveCurrentSlideState();
+  });
+
+  bindSliderAndInput(els.inputImgPosX, els.valImgPosX, (v) => {
+    if (!activeImage || !activeImage.parentElement) return;
+    activeImage.parentElement.style.marginLeft = v + 'px';
+    saveCurrentSlideState();
+  });
 
   // エクスポート
   els.btnExportHtml.addEventListener('click', () => els.exportModal.classList.remove('hidden'));

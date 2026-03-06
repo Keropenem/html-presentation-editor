@@ -84,6 +84,26 @@
                 <input type="range" id="input-crop-y" min="-100" max="100" value="0">
               </div>
             </div>
+            <div class="control-row">
+              <div class="control-group">
+                <label>幅 <input type="number" id="val-img-width" class="slider-val-input" value="100" min="10" max="200"><span class="slider-unit">%</span></label>
+                <input type="range" id="input-img-width" min="10" max="200" step="1" value="100">
+              </div>
+              <div class="control-group">
+                <label>高さ <input type="number" id="val-img-height" class="slider-val-input" value="100" min="10" max="200"><span class="slider-unit">%</span></label>
+                <input type="range" id="input-img-height" min="10" max="200" step="1" value="100">
+              </div>
+            </div>
+            <div class="control-row">
+              <div class="control-group">
+                <label>ボックス左右 <input type="number" id="val-img-pos-x" class="slider-val-input" value="0" min="-200" max="200"><span class="slider-unit">px</span></label>
+                <input type="range" id="input-img-pos-x" min="-200" max="200" step="1" value="0">
+              </div>
+              <div class="control-group">
+                <label>ボックス上下 <input type="number" id="val-img-pos-y" class="slider-val-input" value="0" min="-200" max="200"><span class="slider-unit">px</span></label>
+                <input type="range" id="input-img-pos-y" min="-200" max="200" step="1" value="0">
+              </div>
+            </div>
             <button id="btn-change-image-alt" class="btn btn-secondary full-width">
               <i class="fa-solid fa-image"></i> 画像を差し替える
             </button>
@@ -136,12 +156,12 @@
                 <input type="range" id="input-text-lineheight" min="0.8" max="3.0" step="0.1" value="1.5">
               </div>
               <div class="control-group">
-                <label>上余白 <input type="number" id="val-margin-top" class="slider-val-input" value="0" min="-50" max="200"><span class="slider-unit">px</span></label>
-                <input type="range" id="input-text-margin-top" min="-50" max="200" step="1" value="0">
+                <label>上下位置 <input type="number" id="val-text-pos-y" class="slider-val-input" value="0" min="-200" max="200"><span class="slider-unit">px</span></label>
+                <input type="range" id="input-text-pos-y" min="-200" max="200" step="1" value="0">
               </div>
               <div class="control-group">
-                <label>下余白 <input type="number" id="val-margin-bottom" class="slider-val-input" value="0" min="-50" max="200"><span class="slider-unit">px</span></label>
-                <input type="range" id="input-text-margin-bottom" min="-50" max="200" step="1" value="0">
+                <label>左右位置 <input type="number" id="val-text-pos-x" class="slider-val-input" value="0" min="-200" max="200"><span class="slider-unit">px</span></label>
+                <input type="range" id="input-text-pos-x" min="-200" max="200" step="1" value="0">
               </div>
             </div>
           </div>
