@@ -263,13 +263,20 @@ class SlideRenderer {
 
     this.shadow.appendChild(wrapper);
 
-    // インポートされた画像の設定を復元（調整済みの画像のみ）
+    // インポートされた画像の設定を復元
     wrapper.querySelectorAll('img').forEach(img => {
       if (img.dataset.cropZoom || img.dataset.cropX || img.dataset.cropY) {
         applyImageTransform(img);
       }
-      // コンテナからはみ出さないように設定
-      if (img.parentElement) img.parentElement.style.overflow = 'hidden';
+      const p = img.parentElement;
+      if (p) {
+        // フレーム編集済みの画像はinlineスタイルが保存済み
+        if (!p.dataset.frameW) {
+          img.style.setProperty('width', '100%', 'important');
+          img.style.setProperty('height', '100%', 'important');
+          p.style.overflow = 'hidden';
+        }
+      }
     });
 
     wrapper.addEventListener('input', () => {
@@ -373,6 +380,9 @@ function selectImageForEdit(img) {
     els.valImgPosY.value = imgPosY;
     els.inputImgPosX.value = imgPosX;
     els.valImgPosX.value = imgPosX;
+
+    // フレーム設定を適用（width/height/clip-path/overflow）
+    applyImageFrame();
   }
 
   els.imagePanel.classList.remove('hidden');
@@ -449,24 +459,57 @@ function applyImageTransform(img) {
   const posX = 50 + (x / 2);
   const posY = 50 + (y / 2);
 
-  // 1. 画像の比率を維持したまま、枠を埋める (歪み防止)
-  img.style.setProperty('width', '100%', 'important');
-  img.style.setProperty('height', '100%', 'important');
+  // object-fit/position でクロップ制御（width/heightはapplyImageFrameで管理）
   img.style.setProperty('object-fit', 'cover', 'important');
-
-  // 2. object-position で「元々の比率によるはみ出し」を調整
   img.style.setProperty('object-position', `${posX}% ${posY}%`, 'important');
-
-  // 3. transform-origin を同じ座標に設定し、scale でズーム
-  // これがポイントです。ズームの基点を動かすことで、拡大された画像内の
-  // 上下左右どの端へも、スライダー一つでアクセスできるようになります。
   img.style.setProperty('transform-origin', `${posX}% ${posY}%`, 'important');
   img.style.setProperty('transform', `scale(${zoom})`, 'important');
+}
 
-  // 親要素からはみ出た部分を隠す
-  if (img.parentElement) {
-    img.parentElement.style.overflow = 'hidden';
+// 画像フレーム: clip-pathで中心基準のフレーム切り取り（縮小・拡大対応）
+function applyImageFrame() {
+  if (!activeImage || !activeImage.parentElement) return;
+  const parent = activeImage.parentElement;
+
+  const wPct = parseFloat(els.inputImgWidth.value);
+  const hPct = parseFloat(els.inputImgHeight.value);
+
+  // data属性に保存（復元用）
+  parent.dataset.frameW = wPct;
+  parent.dataset.frameH = hPct;
+
+  // clip-path: inset で中心から均等にクリップ（負値=拡大方向）
+  const hInset = (100 - wPct) / 2;
+  const vInset = (100 - hPct) / 2;
+  parent.style.clipPath = (wPct !== 100 || hPct !== 100)
+    ? `inset(${vInset}% ${hInset}%)`
+    : '';
+
+  // 画像サイズ: >100%時は画像を親からはみ出させる
+  const imgW = Math.max(wPct, 100);
+  const imgH = Math.max(hPct, 100);
+  activeImage.style.setProperty('width', imgW + '%', 'important');
+  activeImage.style.setProperty('height', imgH + '%', 'important');
+
+  if (wPct > 100 || hPct > 100) {
+    parent.style.overflow = 'visible';
+    activeImage.style.setProperty('position', 'relative', 'important');
+    activeImage.style.setProperty('left', `${-(imgW - 100) / 2}%`, 'important');
+    activeImage.style.setProperty('top', `${-(imgH - 100) / 2}%`, 'important');
+  } else {
+    parent.style.overflow = 'hidden';
+    activeImage.style.removeProperty('position');
+    activeImage.style.removeProperty('left');
+    activeImage.style.removeProperty('top');
   }
+
+  // ボックス位置
+  const posX = parseFloat(els.inputImgPosX.value) || 0;
+  const posY = parseFloat(els.inputImgPosY.value) || 0;
+  parent.style.transform = (posX || posY)
+    ? `translate(${posX}px, ${posY}px)`
+    : '';
+  saveCurrentSlideState();
 }
 
 function saveCurrentSlideState() {
@@ -813,34 +856,6 @@ function setupEventListeners() {
   bindSliderAndInput(els.inputTextPosX, els.valTextPosX, () => applyTextPosition());
 
   els.btnCloseTextPanel.addEventListener('click', closeTextPanelFunc);
-
-  // 画像フレーム: clip-pathで中心基準のフレーム切り取り
-  function applyImageFrame() {
-    if (!activeImage || !activeImage.parentElement) return;
-    const parent = activeImage.parentElement;
-
-    const wPct = parseFloat(els.inputImgWidth.value);
-    const hPct = parseFloat(els.inputImgHeight.value);
-
-    // data属性に保存（復元用）
-    parent.dataset.frameW = wPct;
-    parent.dataset.frameH = hPct;
-
-    // clip-path: inset で中心から均等にクリップ
-    const hInset = (100 - wPct) / 2;
-    const vInset = (100 - hPct) / 2;
-    parent.style.clipPath = (wPct < 100 || hPct < 100)
-      ? `inset(${vInset}% ${hInset}%)`
-      : '';
-
-    // ボックス位置
-    const posX = parseFloat(els.inputImgPosX.value) || 0;
-    const posY = parseFloat(els.inputImgPosY.value) || 0;
-    parent.style.transform = (posX || posY)
-      ? `translate(${posX}px, ${posY}px)`
-      : '';
-    saveCurrentSlideState();
-  }
 
   bindSliderAndInput(els.inputImgWidth, els.valImgWidth, () => applyImageFrame());
   bindSliderAndInput(els.inputImgHeight, els.valImgHeight, () => applyImageFrame());
