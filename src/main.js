@@ -469,7 +469,8 @@ function updateActiveImageCrop() {
   activeImage.dataset.cropY = els.cropY.value;
 
   applyImageTransform(activeImage);
-  saveCurrentSlideState();
+  // applyImageFrameでズーム制約clip-pathを更新 + save
+  applyImageFrame();
 }
 
 function applyImageTransform(img) {
@@ -488,8 +489,8 @@ function applyImageTransform(img) {
   img.style.setProperty('transform', `scale(${zoom})`, 'important');
 }
 
-// 画像フレーム: parentサイズ不変、clip-path(parent)でフレーム境界を定義
-// 拡大=負inset、縮小=正inset → ズームもclip-pathで自動制約
+// 画像フレーム: parentサイズ不変、<100%=clip-path(parent)、>100%=overflow:visible
+// ズーム時はIMAGEのclip-pathでscaleによるはみ出しを制約
 function applyImageFrame() {
   if (!activeImage || !activeImage.parentElement) return;
   const parent = activeImage.parentElement;
@@ -522,40 +523,55 @@ function applyImageFrame() {
   activeImage.style.setProperty('width', imgW + '%', 'important');
   activeImage.style.setProperty('height', imgH + '%', 'important');
 
-  // フレーム境界: clip-path inset（parent上で統一管理）
-  // 正値=内側クリップ（縮小）、負値=外側拡張（拡大）
-  const cpTop    = hPct < 100 ? (100 - hPct) / 2 : 0;
-  const cpBottom = hPct < 100 ? (100 - hPct) / 2 : -(hPct - 100);
-  const cpLeft   = wPct < 100 ? (100 - wPct) / 2 : -(wPct - 100) / 2;
-  const cpRight  = wPct < 100 ? (100 - wPct) / 2 : -(wPct - 100) / 2;
+  // フレーム縮小inset（縮小次元のクロップ用）
+  const hInset = wPct < 100 ? (100 - wPct) / 2 : 0;
+  const vInset = hPct < 100 ? (100 - hPct) / 2 : 0;
 
-  parent.style.overflow = isExpanding ? 'visible' : 'hidden';
-
-  if (cpTop || cpBottom || cpLeft || cpRight) {
-    parent.style.clipPath = `inset(${cpTop}% ${cpRight}% ${cpBottom}% ${cpLeft}%)`;
-  } else {
-    parent.style.clipPath = '';
-  }
-
-  // 画像のclip-pathはクリア（parentで一元管理）
-  activeImage.style.removeProperty('clip-path');
+  // ズーム制約: scale(z)のはみ出しをIMAGEのclip-pathで補正
+  const zoom = Math.max(1, (activeImage.dataset.cropZoom || 100) / 100);
+  const cropX = parseFloat(activeImage.dataset.cropX || 0);
+  const cropY = parseFloat(activeImage.dataset.cropY || 0);
+  const ox = 50 + cropX / 2; // transform-origin X (%)
+  const oy = 50 + cropY / 2; // transform-origin Y (%)
+  const zf = (zoom - 1) / zoom; // ズーム補正係数
 
   if (isExpanding) {
+    // --- 拡大: overflow:visible、parentサイズ変更なし ---
+    parent.style.overflow = 'visible';
+    parent.style.clipPath = '';
+
     activeImage.style.setProperty('position', 'relative', 'important');
-    // 横: 中心基準で左右均等にはみ出す
     activeImage.style.setProperty('left',
       wPct > 100 ? `${-(imgW - 100) / 2}%` : '0', 'important');
-    // 縦: 下方向のみ伸ばす
     activeImage.style.setProperty('top', '0', 'important');
+
+    // IMAGE clip-path: フレーム縮小inset + ズーム制約inset
+    const clipTop    = vInset + oy * zf;
+    const clipRight  = hInset + (100 - ox) * zf;
+    const clipBottom = vInset + (100 - oy) * zf;
+    const clipLeft   = hInset + ox * zf;
+
+    if (clipTop || clipRight || clipBottom || clipLeft) {
+      activeImage.style.setProperty('clip-path',
+        `inset(${clipTop}% ${clipRight}% ${clipBottom}% ${clipLeft}%)`, 'important');
+    } else {
+      activeImage.style.removeProperty('clip-path');
+    }
 
     // 高さ拡大時: margin-bottomで後続を押し下げ
     if (hPct > 100) {
       parent.style.marginBottom = (origH * (hPct - 100) / 100) + 'px';
     }
   } else {
+    // --- 縮小/通常: clip-path(parent) + overflow:hidden ---
+    parent.style.overflow = 'hidden';
+    parent.style.clipPath = (hInset || vInset)
+      ? `inset(${vInset}% ${hInset}%)` : '';
+
     activeImage.style.removeProperty('position');
     activeImage.style.removeProperty('left');
     activeImage.style.removeProperty('top');
+    activeImage.style.removeProperty('clip-path');
   }
 
   // ボックス位置
@@ -568,8 +584,11 @@ function applyImageFrame() {
   saveCurrentSlideState();
 
   // 編集インジケータ（save後に適用 → innerHTMLに含まれない）
-  // drop-shadowはclip-path形状に追従 → フレーム形の枠になる
-  parent.style.filter = IMG_EDIT_FILTER;
+  if (isExpanding) {
+    activeImage.style.setProperty('filter', IMG_EDIT_FILTER, 'important');
+  } else {
+    parent.style.filter = IMG_EDIT_FILTER;
+  }
 }
 
 function saveCurrentSlideState() {
