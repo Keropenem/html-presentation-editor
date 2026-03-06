@@ -327,6 +327,10 @@ body {
   animation: slideUp 0.3s ease-out;
 }
 
+#image-editor-panel {
+  width: 340px;
+}
+
 .editor-panel.hidden {
   display: none;
 }
