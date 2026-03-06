@@ -505,7 +505,8 @@ function applyImageTransform(img) {
   img.style.removeProperty('transform-origin');
 }
 
-// 画像フレーム: parentサイズ不変、<100%=clip-path(parent)、>100%=overflow:visible+画像拡大
+// 画像フレーム: <100%=clip-path(parent)、>100%=transform:scale(parent)
+// transform はレイアウトに影響しないので兄弟要素のサイズ不変
 function applyImageFrame() {
   if (!activeImage || !activeImage.parentElement) return;
   const parent = activeImage.parentElement;
@@ -524,48 +525,39 @@ function applyImageFrame() {
   parent.style.filter = '';
   activeImage.style.removeProperty('filter');
 
-  // parentのサイズは一切変更しない（flex/gridレイアウトへの影響ゼロ）
+  // リセット
   parent.style.width = '';
   parent.style.maxWidth = '';
   parent.style.height = '';
   parent.style.marginLeft = '';
   parent.style.marginRight = '';
   parent.style.marginBottom = '';
+  parent.style.overflow = '';
+  parent.style.visibility = '';
+  parent.style.position = '';
+  parent.style.zIndex = '';
+  activeImage.style.setProperty('width', '100%', 'important');
+  activeImage.style.setProperty('height', '100%', 'important');
+  activeImage.style.removeProperty('position');
+  activeImage.style.removeProperty('left');
+  activeImage.style.removeProperty('top');
+  activeImage.style.removeProperty('visibility');
 
-  // 画像サイズ
-  const imgW = Math.max(wPct, 100);
-  const imgH = Math.max(hPct, 100);
-  activeImage.style.setProperty('width', imgW + '%', 'important');
-  activeImage.style.setProperty('height', imgH + '%', 'important');
-
-  // clip-path inset（縮小次元のみ、正値のみ）
+  // clip-path inset（縮小次元のみ）
   const hInset = wPct < 100 ? (100 - wPct) / 2 : 0;
   const vInset = hPct < 100 ? (100 - hPct) / 2 : 0;
 
   if (isExpanding) {
-    // --- 拡大: overflow:visible、parentサイズ変更なし ---
-    parent.style.overflow = 'visible';
-    parent.style.clipPath = '';
-    // スタッキングコンテキストを生成 → 兄弟要素の上に描画される
-    parent.style.position = 'relative';
-    parent.style.zIndex = '1';
-    // parentの背景/ボーダーを非表示（画像だけ見せる）
-    parent.style.visibility = 'hidden';
-    activeImage.style.setProperty('visibility', 'visible', 'important');
+    // --- 拡大: transform:scale でparentごと拡大 ---
+    // レイアウトに影響しない・背景/ボーダーも一緒に拡大される
+    const scaleX = Math.max(wPct, 100) / 100;
+    const scaleY = Math.max(hPct, 100) / 100;
 
-    activeImage.style.setProperty('position', 'relative', 'important');
-    // 横: 中心基準で左右均等にはみ出す
-    activeImage.style.setProperty('left',
-      wPct > 100 ? `${-(imgW - 100) / 2}%` : '0', 'important');
-    // 縦: 下方向のみ伸ばす
-    activeImage.style.setProperty('top', '0', 'important');
-
-    // 縮小次元がある場合はIMAGEにclip-path（例: 幅150%高さ80%）
+    // 縮小次元がある場合はparentにclip-path
     if (hInset || vInset) {
-      activeImage.style.setProperty('clip-path',
-        `inset(${vInset}% ${hInset}%)`, 'important');
+      parent.style.clipPath = `inset(${vInset}% ${hInset}%)`;
     } else {
-      activeImage.style.removeProperty('clip-path');
+      parent.style.clipPath = '';
     }
 
     // 高さ拡大時: margin-bottomで後続を押し下げ
@@ -577,32 +569,25 @@ function applyImageFrame() {
     parent.style.overflow = 'hidden';
     parent.style.clipPath = (hInset || vInset)
       ? `inset(${vInset}% ${hInset}%)` : '';
-    parent.style.position = '';
-    parent.style.zIndex = '';
-    parent.style.visibility = '';
-    activeImage.style.removeProperty('visibility');
-
-    activeImage.style.removeProperty('position');
-    activeImage.style.removeProperty('left');
-    activeImage.style.removeProperty('top');
     activeImage.style.removeProperty('clip-path');
   }
 
-  // ボックス位置
+  // ボックス位置 + スケール
   const posX = parseFloat(els.inputImgPosX.value) || 0;
   const posY = parseFloat(els.inputImgPosY.value) || 0;
-  parent.style.transform = (posX || posY)
-    ? `translate(${posX}px, ${posY}px)`
-    : '';
+  const scaleX = isExpanding ? Math.max(wPct, 100) / 100 : 1;
+  const scaleY = isExpanding ? Math.max(hPct, 100) / 100 : 1;
+  const parts = [];
+  if (posX || posY) parts.push(`translate(${posX}px, ${posY}px)`);
+  if (scaleX !== 1 || scaleY !== 1) parts.push(`scale(${scaleX}, ${scaleY})`);
+  parent.style.transform = parts.join(' ') || '';
+  // 拡大時: 中心基準でスケール
+  parent.style.transformOrigin = isExpanding ? 'center top' : '';
 
   saveCurrentSlideState();
 
   // 編集インジケータ（save後に適用 → innerHTMLに含まれない）
-  if (isExpanding) {
-    activeImage.style.setProperty('filter', IMG_EDIT_FILTER, 'important');
-  } else {
-    parent.style.filter = IMG_EDIT_FILTER;
-  }
+  parent.style.filter = IMG_EDIT_FILTER;
 }
 
 function saveCurrentSlideState() {
