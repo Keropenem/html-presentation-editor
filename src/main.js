@@ -890,9 +890,9 @@ function handlePrint(slidesPerPage = 1) {
       display: grid;
       grid-template-columns: repeat(${layout.cols}, ${cellW}mm);
       grid-template-rows: repeat(${layout.rows}, ${cellH}mm);
-      gap: ${gap}mm;
-      padding: ${marginY}mm ${marginX}mm;
-      align-content: start;
+      column-gap: ${gap}mm;
+      padding: 0 ${marginX}mm;
+      align-content: space-evenly;
     }
     .grid-cell {
       width: ${cellW}mm; height: ${cellH}mm;
