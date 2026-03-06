@@ -478,12 +478,12 @@ function applyImageTransform(img) {
   img.style.setProperty('transform', `scale(${zoom})`, 'important');
 }
 
-// 画像フレーム: 幅≤100%(clip-path)、高さ>100%可(parent実height変更)
+// 画像フレーム: <100%はclip-path、>100%はparent実サイズ+負マージン中央配置
 function applyImageFrame() {
   if (!activeImage || !activeImage.parentElement) return;
   const parent = activeImage.parentElement;
 
-  const wPct = Math.min(parseFloat(els.inputImgWidth.value), 100); // 幅は100%上限
+  const wPct = parseFloat(els.inputImgWidth.value);
   const hPct = parseFloat(els.inputImgHeight.value);
   const origH = parseFloat(parent.dataset.origH) || parent.offsetHeight;
   const origW = parseFloat(parent.dataset.origW) || parent.offsetWidth;
@@ -494,41 +494,49 @@ function applyImageFrame() {
 
   // 編集インジケータをクリア（save前に除去して保存対象外にする）
   parent.style.filter = '';
-  activeImage.style.removeProperty('filter');
 
-  // 画像は常にparent内100%
+  // 画像は常にparent内100%（parentサイズでフレーム制御）
   activeImage.style.setProperty('width', '100%', 'important');
   activeImage.style.setProperty('height', '100%', 'important');
   activeImage.style.removeProperty('position');
   activeImage.style.removeProperty('left');
   activeImage.style.removeProperty('top');
   activeImage.style.removeProperty('clip-path');
+  activeImage.style.removeProperty('filter');
   parent.style.overflow = 'hidden';
 
-  // --- 幅: clip-pathで中心基準クロップ（≤100%のみ） ---
-  const hInset = wPct < 100 ? (100 - wPct) / 2 : 0;
-
-  // --- 高さ ---
-  let vInset = 0;
-  if (hPct > 100 && origH) {
-    // 拡大: parent実heightを変更（下にコンテンツを押し出す）
-    parent.style.height = (origH * hPct / 100) + 'px';
-    // 幅をピン留め（CSSアスペクト比連動を防止）
-    parent.style.width = origW + 'px';
+  // --- 幅 ---
+  if (wPct > 100 && origW) {
+    // 拡大: parent実幅 + 負マージンで中央配置（レイアウト貢献量=origW維持）
+    const newW = origW * wPct / 100;
+    const extra = newW - origW;
+    parent.style.width = newW + 'px';
     parent.style.maxWidth = 'none';
-  } else if (hPct < 100) {
-    // 縮小: clip-path
-    vInset = (100 - hPct) / 2;
-    parent.style.height = '';
-    parent.style.width = '';
-    parent.style.maxWidth = '';
+    parent.style.marginLeft = (-extra / 2) + 'px';
+    parent.style.marginRight = (-extra / 2) + 'px';
   } else {
-    parent.style.height = '';
     parent.style.width = '';
     parent.style.maxWidth = '';
+    parent.style.marginLeft = '';
+    parent.style.marginRight = '';
   }
 
-  // clip-path適用（幅縮小 or 高さ縮小）
+  // --- 高さ ---
+  if (hPct > 100 && origH) {
+    // 拡大: parent実height変更（下にコンテンツを押し出す）
+    parent.style.height = (origH * hPct / 100) + 'px';
+    // 幅をピン留め（CSSアスペクト比連動を防止、ただし幅拡大時はそちらが優先）
+    if (wPct <= 100) {
+      parent.style.width = origW + 'px';
+      parent.style.maxWidth = 'none';
+    }
+  } else {
+    parent.style.height = '';
+  }
+
+  // clip-path: 縮小次元のみ
+  const hInset = wPct < 100 ? (100 - wPct) / 2 : 0;
+  const vInset = hPct < 100 ? (100 - hPct) / 2 : 0;
   parent.style.clipPath = (hInset || vInset) ? `inset(${vInset}% ${hInset}%)` : '';
 
   // ボックス位置
