@@ -549,6 +549,9 @@ function applyImageFrame() {
     // スタッキングコンテキストを生成 → 兄弟要素の上に描画される
     parent.style.position = 'relative';
     parent.style.zIndex = '1';
+    // parentの背景/ボーダーを非表示（画像だけ見せる）
+    parent.style.visibility = 'hidden';
+    activeImage.style.setProperty('visibility', 'visible', 'important');
 
     activeImage.style.setProperty('position', 'relative', 'important');
     // 横: 中心基準で左右均等にはみ出す
@@ -576,6 +579,8 @@ function applyImageFrame() {
       ? `inset(${vInset}% ${hInset}%)` : '';
     parent.style.position = '';
     parent.style.zIndex = '';
+    parent.style.visibility = '';
+    activeImage.style.removeProperty('visibility');
 
     activeImage.style.removeProperty('position');
     activeImage.style.removeProperty('left');
