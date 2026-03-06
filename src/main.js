@@ -524,6 +524,10 @@ function applyImageFrame() {
     parent.style.maxWidth = 'none';
     parent.style.marginLeft = (-extraW / 2) + 'px';
     parent.style.marginRight = (-extraW / 2) + 'px';
+    // 高さをピン留め（CSS aspect-ratio連動を防止）
+    if (hPct <= 100) {
+      parent.style.height = origH + 'px';
+    }
   } else {
     parent.style.width = '';
     parent.style.maxWidth = '';
@@ -539,7 +543,8 @@ function applyImageFrame() {
       parent.style.width = origW + 'px';
       parent.style.maxWidth = 'none';
     }
-  } else {
+  } else if (wPct <= 100) {
+    // 幅拡大時は既にピン留め済みなのでクリアしない
     parent.style.height = '';
   }
 
