@@ -359,6 +359,14 @@ function selectImageForEdit(img) {
   // 親要素のフレーム・位置を読み取り
   const parent = img.parentElement;
   if (parent) {
+    // 元の高さを記録（初回のみ、CSS本来の高さを取得）
+    if (!parent.dataset.origH) {
+      const savedH = parent.style.height;
+      parent.style.height = '';
+      parent.dataset.origH = parent.offsetHeight;
+      parent.style.height = savedH;
+    }
+
     // フレームサイズ: data属性から復元（なければ100%）
     const wPct = parseFloat(parent.dataset.frameW) || 100;
     const hPct = parseFloat(parent.dataset.frameH) || 100;
@@ -474,36 +482,49 @@ function applyImageTransform(img) {
   img.style.setProperty('transform', `scale(${zoom})`, 'important');
 }
 
-// 画像フレーム: clip-pathで中心基準のフレーム切り取り（縮小・拡大対応）
+// 画像フレーム: 横はclip-path（中心基準）、縦拡大は実heightで下に押し出す
 function applyImageFrame() {
   if (!activeImage || !activeImage.parentElement) return;
   const parent = activeImage.parentElement;
 
   const wPct = parseFloat(els.inputImgWidth.value);
   const hPct = parseFloat(els.inputImgHeight.value);
+  const origH = parseFloat(parent.dataset.origH);
 
   // data属性に保存（復元用）
   parent.dataset.frameW = wPct;
   parent.dataset.frameH = hPct;
 
-  // clip-path: inset で中心から均等にクリップ（負値=拡大方向）
+  // --- 横方向: clip-pathで中心基準（レイアウト影響なし） ---
   const hInset = (100 - wPct) / 2;
-  const vInset = (100 - hPct) / 2;
-  parent.style.clipPath = (wPct !== 100 || hPct !== 100)
+
+  // --- 縦方向: >100%は実height変更、≤100%はclip-path ---
+  let vInset = 0;
+  if (hPct > 100 && origH) {
+    parent.style.height = (origH * hPct / 100) + 'px';
+    vInset = 0; // 縦はclip不要
+  } else if (hPct < 100) {
+    parent.style.height = '';
+    vInset = (100 - hPct) / 2;
+  } else {
+    parent.style.height = '';
+  }
+
+  // clip-path適用
+  parent.style.clipPath = (hInset !== 0 || vInset !== 0)
     ? `inset(${vInset}% ${hInset}%)`
     : '';
 
-  // 画像サイズ: >100%時は画像を親からはみ出させる
+  // 横拡大: 画像をはみ出させる
   const imgW = Math.max(wPct, 100);
-  const imgH = Math.max(hPct, 100);
   activeImage.style.setProperty('width', imgW + '%', 'important');
-  activeImage.style.setProperty('height', imgH + '%', 'important');
+  activeImage.style.setProperty('height', '100%', 'important');
 
-  if (wPct > 100 || hPct > 100) {
+  if (wPct > 100) {
     parent.style.overflow = 'visible';
     activeImage.style.setProperty('position', 'relative', 'important');
     activeImage.style.setProperty('left', `${-(imgW - 100) / 2}%`, 'important');
-    activeImage.style.setProperty('top', `${-(imgH - 100) / 2}%`, 'important');
+    activeImage.style.removeProperty('top');
   } else {
     parent.style.overflow = 'hidden';
     activeImage.style.removeProperty('position');
