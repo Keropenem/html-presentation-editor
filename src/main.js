@@ -359,10 +359,19 @@ function selectImageForEdit(img) {
   // 親要素のフレーム・位置を読み取り
   const parent = img.parentElement;
   if (parent) {
-    // 元のサイズを記録（初回のみ）
+    // 元のサイズを記録（初回のみ、CSS本来のサイズを取得）
     if (!parent.dataset.origH) {
+      const savedH = parent.style.height;
+      const savedW = parent.style.width;
+      parent.style.height = '';
+      parent.style.width = '';
+      parent.style.maxWidth = '';
+      parent.style.marginLeft = '';
+      parent.style.marginRight = '';
       parent.dataset.origH = parent.offsetHeight;
       parent.dataset.origW = parent.offsetWidth;
+      parent.style.height = savedH;
+      parent.style.width = savedW;
     }
 
     // フレームサイズ: data属性から復元（なければ100%）
@@ -390,8 +399,10 @@ function selectImageForEdit(img) {
     els.inputImgPosX.value = imgPosX;
     els.valImgPosX.value = imgPosX;
 
-    // フレーム設定を適用（編集インジケータも含む）
+    // フレーム設定を適用（width/height/clip-path/overflow）
     applyImageFrame();
+    // 編集インジケータ（drop-shadowはclip-path後に適用されるためフレーム形状に追従）
+    parent.style.filter = IMG_EDIT_FILTER;
   }
 
   els.imagePanel.classList.remove('hidden');
@@ -478,7 +489,7 @@ function applyImageTransform(img) {
   img.style.setProperty('transform', `scale(${zoom})`, 'important');
 }
 
-// 画像フレーム: <100%はclip-path、>100%はparent実サイズ+負マージン中央配置
+// 画像フレーム: <100%はclip-path、>100%はparent実サイズ変更+負マージン
 function applyImageFrame() {
   if (!activeImage || !activeImage.parentElement) return;
   const parent = activeImage.parentElement;
@@ -492,28 +503,27 @@ function applyImageFrame() {
   parent.dataset.frameW = wPct;
   parent.dataset.frameH = hPct;
 
-  // 編集インジケータをクリア（save前に除去して保存対象外にする）
-  parent.style.filter = '';
-
   // 画像は常にparent内100%（parentサイズでフレーム制御）
   activeImage.style.setProperty('width', '100%', 'important');
   activeImage.style.setProperty('height', '100%', 'important');
   activeImage.style.removeProperty('position');
   activeImage.style.removeProperty('left');
   activeImage.style.removeProperty('top');
-  activeImage.style.removeProperty('clip-path');
-  activeImage.style.removeProperty('filter');
   parent.style.overflow = 'hidden';
 
-  // --- 幅 ---
+  // --- 縮小 (<100%): clip-pathで中心基準クロップ ---
+  const hInset = wPct < 100 ? (100 - wPct) / 2 : 0;
+  const vInset = hPct < 100 ? (100 - hPct) / 2 : 0;
+  parent.style.clipPath = (hInset || vInset) ? `inset(${vInset}% ${hInset}%)` : '';
+
+  // --- 幅拡大 (>100%): parent実幅変更 + 負マージンで中央配置 ---
   if (wPct > 100 && origW) {
-    // 拡大: parent実幅 + 負マージンで中央配置（レイアウト貢献量=origW維持）
     const newW = origW * wPct / 100;
-    const extra = newW - origW;
+    const extraW = newW - origW;
     parent.style.width = newW + 'px';
     parent.style.maxWidth = 'none';
-    parent.style.marginLeft = (-extra / 2) + 'px';
-    parent.style.marginRight = (-extra / 2) + 'px';
+    parent.style.marginLeft = (-extraW / 2) + 'px';
+    parent.style.marginRight = (-extraW / 2) + 'px';
   } else {
     parent.style.width = '';
     parent.style.maxWidth = '';
@@ -521,11 +531,10 @@ function applyImageFrame() {
     parent.style.marginRight = '';
   }
 
-  // --- 高さ ---
+  // --- 高さ拡大 (>100%): parent実高さ変更（下にコンテンツを押し出す）---
   if (hPct > 100 && origH) {
-    // 拡大: parent実height変更（下にコンテンツを押し出す）
     parent.style.height = (origH * hPct / 100) + 'px';
-    // 幅をピン留め（CSSアスペクト比連動を防止、ただし幅拡大時はそちらが優先）
+    // 幅をピン留め（CSS aspect-ratio連動を防止）
     if (wPct <= 100) {
       parent.style.width = origW + 'px';
       parent.style.maxWidth = 'none';
@@ -534,22 +543,13 @@ function applyImageFrame() {
     parent.style.height = '';
   }
 
-  // clip-path: 縮小次元のみ
-  const hInset = wPct < 100 ? (100 - wPct) / 2 : 0;
-  const vInset = hPct < 100 ? (100 - hPct) / 2 : 0;
-  parent.style.clipPath = (hInset || vInset) ? `inset(${vInset}% ${hInset}%)` : '';
-
   // ボックス位置
   const posX = parseFloat(els.inputImgPosX.value) || 0;
   const posY = parseFloat(els.inputImgPosY.value) || 0;
   parent.style.transform = (posX || posY)
     ? `translate(${posX}px, ${posY}px)`
     : '';
-
   saveCurrentSlideState();
-
-  // 編集インジケータ（保存後に適用 → innerHTMLに含まれない）
-  parent.style.filter = IMG_EDIT_FILTER;
 }
 
 function saveCurrentSlideState() {
